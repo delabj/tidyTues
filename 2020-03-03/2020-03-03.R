@@ -77,7 +77,7 @@ ggsave("hockey_top_10_goal.png", dpi= 300, type = "cairo")
 
 indexed_10 %>%
   ggplot(aes(x=season, y=penalty_min, fill=raw_rank, color=raw_rank))+
-  geom_area( alpha = .5, stat="xspline")+
+  geom_area( alpha = .5)+
   geom_hline(
     data = distinct(indexed_10, player, raw_rank),
     aes(yintercept = 0, color = raw_rank), size = 0.5
@@ -102,6 +102,6 @@ indexed_10 %>%
 
 
 
-ggsave("hockey_top_10_Penalties.png", height = 16, width = 9, dpi= 300, type = "cairo")  
+ggsave("hockey_top_10_Penalties.png", dpi= 300, type = "cairo")  
 
 
