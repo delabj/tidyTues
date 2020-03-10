@@ -1,0 +1,176 @@
+---
+title: 'TidyTuesday: College Data'
+author: "Joshua de la Bruere"
+date: "3/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The first step as always is to load the data form github And to load the libraries we're going to want to use. 
+```{r libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(magrittr)
+library(janitor)
+library(patchwork)
+library(ggtext)
+library(delabj)
+extrafont::loadfonts(device = "win")
+```
+
+```{r read in data, message=FALSE}
+
+
+tuition_cost <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/tuition_cost.csv')
+
+tuition_income <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/tuition_income.csv') 
+
+salary_potential <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/salary_potential.csv')
+
+historical_tuition <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/historical_tuition.csv')
+
+diversity_school <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/diversity_school.csv')
+```
+
+Now as a general practice I use the `janitor` package to clean my data set names. For this I like to use the `magrittr` packages `%<>%` operator which poth pipes and assigns the result
+
+```{r}
+tuition_cost %<>% clean_names()
+tuition_income %<>% clean_names()
+salary_potential %<>% clean_names()
+historical_tuition %<>% clean_names()
+diversity_school %<>% clean_names()
+```
+
+Let's take a look at the data to see what we're working with. 
+
+
+```{r}
+summary(tuition_cost)
+head(tuition_cost)
+summary(tuition_income)
+head(tuition_income)
+summary(salary_potential)
+head(salary_potential)
+summary(historical_tuition)
+head(historical_tuition)
+summary(diversity_school)
+head(diversity_school)
+```
+
+It looks like there could be an interesting difference in growth for mid career vs early career pay. I think it would be interesting to make a plot where you show change in pay and growth using points for starting pay connected by a line representing the change in growth.  We can also use the tuition cost data set to classify them as private or public to see the difference. 
+
+```{r plot pay growth by state}
+tmp <- salary_potential %>%
+  left_join(tuition_cost) %>%
+  mutate(change_in_pay=mid_career_pay-mid_career_pay)%>%
+  group_by(state_name, type) %>%
+  summarise(early_career_pay = median(early_career_pay),
+            mid_career_pay =  median(mid_career_pay), 
+            change_in_pay = median(change_in_pay)) %>%
+  ungroup()
+tmp$state_name <- as.factor(tmp$state_name)
+tmp$state_name <- fct_reorder(tmp$state_name, tmp$early_career_pay)
+  
+p1 <- tmp %>%
+pivot_longer(cols = -c(state_name, type), names_to = "timing", values_to = "pay" ) %>%
+  
+  arrange(desc(timing, pay)) %>%
+  filter(timing != "change_in_pay", 
+          !is.na(type), 
+         type != "For Profit") %>%
+  ggplot(aes(y= state_name))+
+  geom_line(aes(x=pay))+
+  geom_point(aes(x=pay, fill=timing), size = 2, pch = 21)+
+  theme_delabj()+
+  theme(legend.position = "None")+
+  facet_wrap(~type)+
+  scale_fill_manual(values= c("#F19953", '#2660A4'))+
+  theme(panel.grid.major.y = element_blank())+
+  labs(y="", x="Salary", 
+       subtitle = "By State",
+       title = "Growth From <b style='color:#F19953'>Early Career</b> to <b style=color:'#2660A4'>Mid Career</b> Median Expected Salary", 
+       caption = "Data:  Tuitiontracker.org\nViz: @delabj"
+       )+
+  theme(plot.title = element_markdown(element_markdown(lineheight = 1.2)),
+        plot.subtitle = element_markdown(element_markdown(lineheight = 1.1))
+        )
+ggsave("expected_pay.png",plot=p1, dpi= 300, type = "cairo")  
+
+  
+```
+
+```{r plot tution in vs out}
+
+
+
+tmp <- tuition_cost %>%
+  select(state, type, degree_length, in_state_tuition, out_of_state_tuition) %>%
+    filter(
+         type == "Public") %>%
+  group_by(state, type, degree_length) %>%
+  summarise(median_in_state = median(in_state_tuition), 
+            median_out_of_state = median(out_of_state_tuition)) %>%
+  filter(!is.na(state)) %>%
+  mutate(diff= median_out_of_state - median_in_state)
+
+  
+tmp$state <- as.factor(tmp$state)
+tmp$state <- fct_reorder(tmp$state, tmp$diff)
+  
+p2 <- tmp %>%
+pivot_longer(cols = -c(state, type, degree_length), names_to = "cost_type", values_to = "cost" ) %>%
+  filter(cost_type != "diff") %>%
+  ggplot(aes(y= state))+
+  geom_line(aes(x=cost))+
+  geom_point(aes(x=cost, fill=cost_type), size = 2, pch = 21)+
+  theme_delabj()+
+    theme(legend.position = "None")+
+  facet_wrap(~degree_length)+
+  scale_fill_manual(values= c("#83B692", '#5B3758' ))+
+  theme(panel.grid.major.y = element_blank())+
+  labs(y="", x="Salary", 
+       subtitle = "By State",
+       title = "Difference between <b style='color:#83B692'>In State Tuition </b> and <b style=color:'#5B3758'>Out of State Tuition </b>", 
+       caption = "Data:  Tuitiontracker.org\nViz: @delabj")+
+  theme(plot.title = element_markdown(element_markdown(lineheight = 1.2)),
+        plot.subtitle = element_markdown(element_markdown(lineheight = 1.1))
+        )
+ggsave("tuition_by_state.png",plot=p2, dpi= 300, type = "cairo")  
+
+  
+```
+
+
+
+
+
+
+
+But does the amount you make from a private school really impact how much you make in general?
+
+```{r}
+p3 <- salary_potential %>%
+  left_join(tuition_cost) %>%
+  group_by(type) %>%
+  mutate(mean_tuition = (out_of_state_tuition+ in_state_tuition)/2)%>%
+  filter(!is.na(type))%>%
+  ggplot(aes(group = type, y=mid_career_pay, x=mean_tuition, color=type))+
+  geom_point()+
+  theme_delabj()+
+  scale_color_delabj()+
+  theme(legend.position = "none")+
+  labs(y="", x = "Mean Tuition Cost",
+       title= "Does <b style=color:#721121> Private </b> or <b style=color:#2c3227> Public </b> Matter?", 
+       subtitle = "Expected Mid Career Salary By School Type", 
+       caption = "Data:  Tuitiontracker.org\nViz: @delabj")+
+    theme(plot.title = element_markdown(element_markdown(lineheight = 1.2)),
+        plot.subtitle = element_markdown(element_markdown(lineheight = 1.1))
+        )
+  
+  ggsave("salary_private_vs_public.png",plot=p3, dpi= 300, type = "cairo")  
+
+
+```
