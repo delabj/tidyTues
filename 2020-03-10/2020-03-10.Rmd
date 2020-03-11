@@ -131,13 +131,15 @@ pivot_longer(cols = -c(state, type, degree_length), names_to = "cost_type", valu
   facet_wrap(~degree_length)+
   scale_fill_manual(values= c("#83B692", '#5B3758' ))+
   theme(panel.grid.major.y = element_blank())+
-  labs(y="", x="Salary", 
+  labs(y="", x="Tuition", 
        subtitle = "By State",
        title = "Difference between <b style='color:#83B692'>In State Tuition </b> and <b style=color:'#5B3758'>Out of State Tuition </b>", 
        caption = "Data:  Tuitiontracker.org\nViz: @delabj")+
   theme(plot.title = element_markdown(element_markdown(lineheight = 1.2)),
-        plot.subtitle = element_markdown(element_markdown(lineheight = 1.1))
-        )
+        plot.subtitle = element_markdown(element_markdown(lineheight = 1.1)), 
+        
+        )+
+  theme(plot.margin=margin(6,12,6,12))
 ggsave("tuition_by_state.png",plot=p2, dpi= 300, type = "cairo")  
 
   
@@ -156,18 +158,20 @@ p3 <- salary_potential %>%
   left_join(tuition_cost) %>%
   group_by(type) %>%
   mutate(mean_tuition = (out_of_state_tuition+ in_state_tuition)/2)%>%
-  filter(!is.na(type))%>%
+  filter(!is.na(type), 
+         type %in% c("Private", "Public"))%>%
   ggplot(aes(group = type, y=mid_career_pay, x=mean_tuition, color=type))+
   geom_point()+
   theme_delabj()+
-  scale_color_delabj()+
+  scale_color_manual(values= c("#721121", "#525d49"))+
   theme(legend.position = "none")+
   labs(y="", x = "Mean Tuition Cost",
-       title= "Does <b style=color:#721121> Private </b> or <b style=color:#2c3227> Public </b> Matter?", 
+       title= "Does <b style=color:#721121> Private </b> or <b style=color:#525d49> Public </b> Matter?", 
        subtitle = "Expected Mid Career Salary By School Type", 
        caption = "Data:  Tuitiontracker.org\nViz: @delabj")+
     theme(plot.title = element_markdown(element_markdown(lineheight = 1.2)),
-        plot.subtitle = element_markdown(element_markdown(lineheight = 1.1))
+        plot.subtitle = element_markdown(element_markdown(lineheight = 1.1)),
+        aspect.ratio = 0.5625
         )
   
   ggsave("salary_private_vs_public.png",plot=p3, dpi= 300, type = "cairo")  
