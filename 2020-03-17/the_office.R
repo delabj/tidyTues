@@ -6,8 +6,13 @@ library(tidyverse)
 library(tidytext)
 library(ggchicklet)
 library(delabj)
+library(ggtext)
+library(ggridges)
 
 
+
+
+################### EDA ####################
 office_ratings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-17/office_ratings.csv')
 episode_text <- schrute::theoffice
 
@@ -48,22 +53,6 @@ top_10_characters <- c("", "Dwight", "Jim",
                        "Pam", "Andy", "Angela", 
                        "Kevin", "Erin", "Oscar", 
                        "Ryan")
-
-season_word_count %>% 
-  mutate( character = if_else(!(character %in% top_10_characters), "Other", character)) %>%
-  filter(character %in% top_10_characters) %>%
-  mutate(character = fct_reorder(character, words_so_far)) %>%
-  group_by(season, character) %>%
-  summarise(word_count = sum(word_count)) %>%
-  ungroup %>%
-  ggplot(aes(character, word_count, fill = season, group = season ))+
-  geom_chicklet()+
-  theme_delabj()+
-  coord_flip()
-  
-####################### Sentiment Analysis ############################
-
-
 top_10_by_season <- total_line %>%
   group_by(season) %>%
   top_n( n = 10, wt= num_lines) %>%
@@ -75,12 +64,64 @@ main_char <- top_10_by_season %>%
   distinct() %>%
   pull()
 
-library(ggridges)
+##### I wanted to use this, but it didn't work out ######################
+# 
+# season_word_count %>% 
+#   mutate( character = if_else(!(character %in% top_10_characters), "Other", character)) %>%
+#   filter(character %in% top_10_characters) %>%
+#   mutate(character = fct_reorder(character, words_so_far)) %>%
+#   group_by(season, character) %>%
+#   summarise(word_count = sum(word_count)) %>%
+#   ungroup %>%
+#   ggplot(aes(character, word_count, fill = season, group = season ))+
+#   geom_chicklet()+
+#   theme_delabj()+
+#   coord_flip()
+  
+####################### Sentiment Analysis ############################
 
 
-characters_to_plot <- c("Angela", "Dwight" ) #"Jim", "Pam", "Ryan", "Andy")
-characters_to_plot_fac <- factor("Angela", "Dwight")# "Jim", "Pam", "Ryan", "Andy")
-episode_text %>% 
+
+
+
+
+ characters_to_plot <- c("Michael", "Dwight", "Jim", "Pam", "Ryan", "Andy")
+characters_to_plot_fac <- factor("Michael", "Dwight", "Jim", "Pam", "Ryan", "Andy")
+cover <- episode_text %>% 
+  filter(character %in% characters_to_plot) %>%
+  group_by(character, season,  episode) %>%
+  unnest_tokens(word, text) %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(character, season, index = index, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative) %>%
+  summarise(avg_sentiment = sum(positive)/(sum(negative)+sum(positive)), 
+            positive = sum(positive),
+            negative = sum(negative)) %>%
+  ungroup() %>%
+  mutate(character =  fct_relevel(character, levels = characters_to_plot)) %>%
+  ggplot(aes(x=avg_sentiment, y =season, fill = character))+
+  geom_density_ridges(col = "Black", alpha =.65)+
+  labs(y="", x = "Percent Positive Sentiment", 
+       caption = "Data: schrute Package\nVis: @delabjl", 
+       title = "Do I have a special someone? Well, yeah of course. A bunch of ’em.",
+       subtitle = "Character Sentiement Per Episode By Season"
+  )+
+  facet_wrap(~character)+
+  xlim(0,1)+
+  theme_delabj()+
+  scale_fill_manual(values = c("#2660A4", "#e1ad01", "#721121","#83B692", "#F19953", "#525d49"))+
+  legend_none()+
+  
+  coord_fixed(.05) 
+
+ggsave("character_growth_all.png", plot=cover, dpi= 320, height = 10, width=20,  type = "cairo", units = "in")
+jp
+
+## Michael And Dwight
+characters_to_plot <- c("Michael", "Dwight" ) #"Jim", "Pam", "Ryan", "Andy")
+characters_to_plot_fac <- factor("Michael", "Dwight")# "Jim", "Pam", "Ryan", "Andy")
+dm <- episode_text %>% 
   filter(character %in% characters_to_plot) %>%
   group_by(character, season,  episode) %>%
   unnest_tokens(word, text) %>%
@@ -94,13 +135,55 @@ episode_text %>%
   ungroup() %>%
   #mutate(character =  fct_relevel(character, levels = characters_to_plot)) %>%
   ggplot(aes(x=avg_sentiment, y =season, fill = character))+
-  geom_density_ridges(col = "Black", alpha =.75)+
+  geom_density_ridges(col = "Black", alpha =.65)+
   #facet_wrap(~character)+
+  labs(y="", x = "Percent Positive Sentiment", 
+       caption = "Data: schrute Package\nVis: @delabjl",
+       title = paste0('I Can',"'",'t Believe You Came'), 
+       subtitle = "<b style='color:#e1ad01'>Dwight</b> and 
+       <b style='color:#2660A4'>Michael's</b> Percent Positivity By Season")+
   xlim(0,1)+
   theme_delabj()+
-  scale_fill_delabj("main")+
-  #legend_none()
-  labs(y="", x = "Percent Positive Sentiment")
+  scale_fill_manual(values = c("#e1ad01","#2660A4"))+
+  legend_none() +
+  theme(
+        plot.subtitle = element_markdown(element_markdown(lineheight = 1.1)))
+
+ggsave("dwight_and_michael.png",plot=dm, dpi= 300, type = "cairo")  
+
+
+## Jim And Pam
+characters_to_plot <- c("Jim", "Pam" )
+characters_to_plot_fac <- factor("Jim", "Pam")
+jp <- episode_text %>% 
+  filter(character %in% characters_to_plot) %>%
+  group_by(character, season,  episode) %>%
+  unnest_tokens(word, text) %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(character, season, index = index, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative) %>%
+  summarise(avg_sentiment = sum(positive)/(sum(negative)+sum(positive)), 
+            positive = sum(positive),
+            negative = sum(negative)) %>%
+  ungroup() %>%
+  #mutate(character =  fct_relevel(character, levels = characters_to_plot)) %>%
+  ggplot(aes(x=avg_sentiment, y =season, fill = character))+
+  geom_density_ridges(col = "Black", alpha =.65)+
+  #facet_wrap(~character)+
+  labs(y="", x = "Percent Positive Sentiment", 
+       caption = "Data: schrute Package\nVis: @delabjl",
+       title = paste0('"Got It a Week After We Started Dating"'), 
+       subtitle = "<b style='color:#721121'>Jim</b> and 
+       <b style='color:#83B692'>Pam's</b> Percent Positivity By Season")+
+  xlim(0,1)+
+  theme_delabj()+
+  scale_fill_manual(values = c("#721121","#83B692"))+
+  legend_none() +
+  theme(
+    plot.subtitle = element_markdown(element_markdown(lineheight = 1.1)))
+
+ggsave("jim_and_pam.png",plot=jp, dpi= 300, type = "cairo") 
 
 
 ###################### Network ? #######################
