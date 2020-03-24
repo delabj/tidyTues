@@ -107,9 +107,10 @@ tbi_age %>%
 
 full_plot <- deaths/hospital/ervisit
 patchwork::wrap_elements(full_plot) +
-  ggtitle("Tramatic Brain Injuries: Who Gets Hurt and How?", 
+  labs(title = "Tramatic Brain Injuries: Who Gets Hurt and How?", 
           subtitle = "Injuries Leading To: <b style='color:#721121'>Deaths</b>,
-          <b style='color:#F19953'>Hospitalizations</b>, and <b style='color:#2660A4'>ER Visits</b>")+
+          <b style='color:#F19953'>Hospitalizations</b>, and <b style='color:#2660A4'>ER Visits</b>",
+          caption="Data: CDC \n Code: @delabjl")+
   theme_delabj()+
   theme(plot.subtitle = element_markdown())->tbi
 
