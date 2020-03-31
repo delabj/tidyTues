@@ -47,7 +47,7 @@ brewer_size %>%
   theme(plot.subtitle = element_markdown())
 
 
-ggsave("MicroBrewerygrowth.png",, dpi= 320, height = 10, width=20,  type = "cairo", units = "in")
+ggsave("MicroBrewerygrowth.png", dpi= 320, height = 10, width=20,  type = "cairo", units = "in")
 #### Hex map
 library(geojsonio)
 library(rgeos)
