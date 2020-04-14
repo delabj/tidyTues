@@ -1,0 +1,203 @@
+---
+title: "BBC Rap Poll"
+author: "Joshua de la Bruere"
+date: "4/14/2020"
+output:  github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fetching the data/setup
+As always I begin by fetching the data from the tidytuesday repo. Considering the topic today, I am also considering using {spotifyR} to get some more data on the songs. 
+
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ spotifyr (Extra data from spotify's API)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweeks to ggplot, and custom themes)
+
+```{r, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(spotifyr)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(forcats)
+library(ggchicklet)
+
+polls <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-14/polls.csv')
+rankings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-14/rankings.csv')
+
+
+```
+
+let's take a look at the data
+
+```{r}
+polls
+rankings
+```
+
+
+I see that the way this poll was calculated, used a multi choise method, which means there could be an interesting exploration of different counting methods. I want to take a look to see if this is a viable option. 
+
+```{r}
+polls %>%
+  arrange(critic_name)
+
+```
+
+I'm pretty sure that something can be done with  borda count and first past the post. I don't have all pairwise comparisions, so I can't do condorcet comparisions without making a few assumptions. 
+
+```{r bbcMethod}
+bc <- rankings %>%
+  arrange(desc(points)) %>%
+  head(10) %>%
+  mutate(title = as.factor(title)) %>%
+  mutate(title =  fct_reorder(title, points)) %>%
+  mutate(winner = if_else(points == max(rankings$points), "Winner", "Loser")) %>%
+  ggplot(aes(x=points, y=title, fill = winner))+
+  geom_bar(stat="identity")+
+  labs(y="", x="Points", 
+       title = "BBC Counting Method (Borda Count)", 
+       caption = "Data: BBC Music\n Viz: @delabjl")+
+  theme_delabj_dark()+
+  scale_fill_delabj()+
+  legend_none()
+
+ggsave("bc.png", plot = bc, dpi=320, type = "cairo")
+bc
+```
+
+
+How this is calclualted
+```{r}
+combo_bc <- rankings %>%
+  arrange(desc(points)) %>%
+  head(10) %>%
+  mutate(title = as.factor(title)) %>%
+  mutate(title =  fct_reorder(title, points)) %>%
+  mutate(winner = if_else(points == max(rankings$points), "Winner", "Loser")) %>%
+  pivot_longer(cols =  c('n1','n2','n3','n4','n5'),names_to = 'round') %>%
+  mutate(points_by_round = case_when(
+    round == "n1" ~ value * 10,
+    round == "n2" ~ value * 8, 
+    round == "n3" ~ value * 6,
+    round == "n4" ~ value * 4,
+    round == "n5" ~ value * 2,
+    TRUE ~ 0
+  )) %>%
+  ggplot(aes(y=points_by_round, x=title, fill = winner, group = round))+
+  geom_chicklet( color  = "#343E48")+
+  coord_flip()+
+   labs(y="", x="", 
+       title = "Contribution By Round With BBC Borda Count", 
+       caption = "Data: BBC Music\n Viz: @delabjl")+
+  theme_delabj_dark()+
+  scale_fill_delabj()+
+  legend_none()
+
+
+supp.labs <- c("Round 1","Round 2", "Round 3", "Round 4", "Round 5")
+names(supp.labs) <- c("n1", "n2", "n3", "n4", "n5")
+
+
+by_round_bc <- rankings %>%
+  arrange(desc(points)) %>%
+  head(10) %>%
+  mutate(title = as.factor(title)) %>%
+  mutate(title =  fct_reorder(title, points)) %>%
+  mutate(winner = if_else(points == max(rankings$points), "Winner", "Loser")) %>%
+  pivot_longer(cols =  c('n1','n2','n3','n4','n5'),names_to = 'round') %>%
+  mutate(points_by_round = case_when(
+    round == "n1" ~ value * 10,
+    round == "n2" ~ value * 8, 
+    round == "n3" ~ value * 6,
+    round == "n4" ~ value * 4,
+    round == "n5" ~ value * 2,
+    TRUE ~ 0
+  )) %>%
+  ggplot(aes(y=points_by_round, x=title, fill = winner, group = round))+
+  geom_chicklet( color  = "#343E48")+
+  coord_flip()+
+   labs(y="Points", x="", 
+       title = "Points Gained by Round",
+       sub= "Using the Borda Count Method",
+       caption = "Data: BBC Music\n Viz: @delabjl")+
+  theme_delabj_dark()+
+  scale_fill_delabj()+
+  legend_none()+
+  facet_wrap(~round, ncol = 2, labeller = labeller(round = supp.labs))+
+  theme(strip.text = element_text(colour = "#D6D6D6"))+
+  theme(plot.caption = element_text(size = 8))
+
+ggsave("combo_borda.png", plot = combo_bc, dpi=320, type = "cairo")
+ggsave("by_round_borda.png", plot = by_round_bc, dpi=320, type = "cairo")
+combo_bc
+by_round_bc
+
+```
+
+
+Raw Votes
+```{r Raw Vote Count}
+rc_chart <- rankings %>%
+  arrange(desc(points)) %>%
+  head(10) %>%
+  mutate(title = as.factor(title)) %>%
+  mutate(title =  fct_reorder(title, n)) %>%
+  mutate(winner = if_else(n == max(n), "Winner", "Loser")) %>%
+  ggplot(aes(x=n, y=title, fill = winner))+
+  geom_bar(stat="identity")+
+  labs(y="", x="Number of Votes All Rounds", 
+       title = "Equal Point Ranked Voting", 
+       caption = "Data: BBC Music\n Viz: @delabjl")+
+  theme_delabj_dark()+
+  scale_fill_delabj()+
+  legend_none()
+
+ggsave("rc.png", plot = rc_chart, dpi=320, type = "cairo")
+rc_chart
+
+
+```
+
+```{r FPP}
+fpp <- polls %>%
+  arrange(critic_name) %>%
+  filter(rank == 1) %>%
+  group_by(title, artist, gender) %>%
+  summarise(votes = sum(rank), 
+            percent_vote = sum(rank)/107)
+fpp_chart <- fpp %>% arrange(desc(votes)) %>%
+  head(10) %>%
+  ungroup() %>%
+  mutate(title = as.factor(title)) %>%
+  mutate(title =  fct_reorder(title, percent_vote)) %>%
+  mutate(winner = if_else(votes == max(fpp$votes), "Winner", "Loser")) %>%
+  ggplot(aes(y=title, x = percent_vote, fill= winner))+
+  geom_bar(stat = "identity")+
+  labs(y="", x="% Vote", 
+       title = "First Past the Post Method",
+       caption = "Data: BBC Music\n Viz: @delabjl")+
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1))+
+  theme_delabj_dark()+
+  scale_fill_delabj()+
+  legend_none()
+
+ggsave("fpp.png", plot = fpp_chart, dpi=320, type = "cairo")
+fpp_chart
+
+``` 
+
+
+
