@@ -14,8 +14,185 @@ As always I begin by fetching the data from the tidytuesday repo.
 These are the package I plan on using today:
 
 + tidyverse (It's what this is all about)
-+ spotifyr (Extra data from spotify's API)
 + ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
 + patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
 + janitor (makes it easy to clean the names of a data set.)
 + forcats (easy work with factors)
+
+
+```{r, message=F}
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(forcats)
+library(delabj)
+library(glue)
+
+
+gdpr_violations <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-21/gdpr_violations.tsv')
+gdpr_text <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-21/gdpr_text.tsv')
+
+
+```
+
+
+
+## Examining The Data
+
+Now looking at the data frame `gdpr_text`, I'm not likely to make use of that today, at least for general analysis. Instead I want to gocus on the violations recorded. 
+
+```{r echo=F, message =f}
+gdpr_violations
+```
+
+There's only 11 variables here and I'm looking at the options and I see there's only a handful of nice data to plot with. There's country name, price, date, controller, and type. 
+
+The article violated looks like it could use some cleaning up, and the country flag is useful, for addding to a plot, but nothing to analyze there. Summary would take some text mining to do anything with that. 
+
+I want to take a look at a summary plot of fine amount by type and country. 
+```{r}
+
+
+gdpr_violations %>%
+  group_by(name) %>%
+  summarise(total_fines =  sum(price)/1000)%>%
+  ggplot(aes(x = total_fines, y = fct_reorder(as.factor(name), total_fines)))+
+  geom_bar(stat="identity")+
+  theme_delabj()+
+  labs(title = "GDPR Fines Collected by Country", 
+       y = "",
+       x = "Total Fines in 1000 €")
+
+
+gdpr_violations %>%
+  group_by(name) %>%
+  count() %>%
+  ggplot(aes(x = n, y = fct_reorder(as.factor(name), n)))+
+  geom_bar(stat="identity")+
+  theme_delabj()+
+  labs(title = "Number of Fines Collected by Country", 
+       y = "",
+       x = "Number of Fines")
+
+
+gdpr_violations %>%
+  group_by(controller) %>%
+  summarise(total_fines =  sum(price)/1000)%>%
+    arrange(desc(total_fines)) %>%
+  head(10) %>%
+  ggplot(aes(x = total_fines, y = fct_reorder(as.factor(controller), total_fines)))+
+  geom_bar(stat="identity")+
+  theme_delabj() +
+  labs(title = "GDPR Fines Collected by controller", 
+      y="",
+       x = "Total Fines in 1000 €")
+
+gdpr_violations %>%
+  group_by(type) %>%
+  summarise(total_fines =  sum(price)/1000)%>%
+
+  ggplot(aes(x = total_fines, y = fct_reorder(as.factor(type), total_fines)))+
+  geom_bar(stat="identity")+
+  theme_delabj() +
+  labs(title = "GDPR Fines Collected by Type", 
+      y="",
+       x = "Total Fines in 1000 €")
+```
+
+
+It looks like the type of offence has a few more categories than I expected. I probably should have checked that as a factor before plotting
+
+
+## Cleaning The Articles
+
+The articles violated seemed like an interesting place to investigate as well as being easier to clean. 
+
+```{r}
+
+gdpr_text %>% group_by(
+  article
+) %>%
+  count()
+
+
+violated <- gdpr_violations %>%
+ filter(str_detect(article_violated, "GDPR"))  %>% # There are 2 unknowns and 2 not classified by gdpr
+ mutate(articles_violated = str_split(article_violated, pattern = "\\|"),
+         articles_violated = map(articles_violated, 
+                                               str_extract, "Art\\.? ?[0-9]+"),
+         articles_violated = map(articles_violated, 
+                                               ~ sort(unique(.))),
+         articles_violated = map(articles_violated, 
+                                               str_replace, "Art\\.? ?", "")) %>% #This should get the articles that were violated numerically.
+  mutate(num_violated = str_count(articles_violated, ",")+1) #This counts the number of articles violated at once.
+
+
+```
+
+
+```{r}
+violated %>%
+  mutate(date = as.Date(date, format = "%m/%d/%y")) %>%
+  arrange(date)%>%
+  group_by(date) %>%
+  summarise(num_violated = sum(num_violated), 
+            price = sum(price)/1000) %>%
+  ggplot(aes(x=date, y = num_violated))+
+  geom_point(stat="identity",aes(size = price, color = price))+
+  theme_delabj()+
+  scale_size_continuous(guide = F)+
+  scale_x_date(date_breaks = "1 month", limits = NULL)+
+  scale_color_delabj("zune", discrete = F)
+
+
+
+```
+The dates seem a little weird. 
+
+
+Alright, now lets think about a chart that can explain what we've seen. 
+
+
+```{r}
+
+
+
+violated %>%
+  group_by(name) %>%
+  summarise(total_fines =  sum(price)/1000,
+            num_violations = sum(num_violated))%>%
+  arrange(desc(total_fines)) %>%
+  head(10)%>%
+  ggplot(aes(x = total_fines, y = fct_reorder(as.factor(name), total_fines),fill= num_violations ) )+
+  geom_bar(stat="identity")+
+  theme_delabj()+
+  labs(title = "Who's Collecting the Money?",
+       subtitle = "Top 10 Countries Collecting GDPR Fines", 
+       y = "",
+       x = "Total Fines in 1000 €", 
+       caption = "Data: Privacy Affairs\nViz: @delabjl")+
+  scale_fill_viridis_c(option = 3, name = "# Violations")+
+  legend_right()
+
+  ggsave("Collecting the Money.png", dpi =320, type = "cairo")
+  
+  
+  
+  
+  gdpr_violations %>%
+  group_by(name) %>%
+  count() %>%
+  ggplot(aes(x = n, y = fct_reorder(as.factor(name), n), fill = n))+
+  geom_bar(stat="identity")+
+  theme_delabj()+
+  labs(title = "Number of Fines Collected by Country", 
+        y = "",
+       x = "Total Fines in 1000 €", 
+       caption = "Data: Privacy Affairs\nViz: @delabjl")+
+     scale_fill_viridis_c(option = 3, name = "# Violations")+
+  legend_right()
+
+  ggsave("Number of Fines.png", dpi =320, type = "cairo")
+
+```
