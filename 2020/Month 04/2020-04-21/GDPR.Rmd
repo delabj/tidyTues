@@ -1,0 +1,21 @@
+---
+title: "#TidyTuesday: GDPR Fines"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fetching the data/setup
+As always I begin by fetching the data from the tidytuesday repo. 
+
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ spotifyr (Extra data from spotify's API)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
