@@ -1,0 +1,162 @@
+---
+title: "Broadway SHows"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fetching the data/setup
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweeks to ggplot, and custom themes)
+
+```{r, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(forcats)
+
+grosses <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-28/grosses.csv', guess_max = 47525)
+synopses <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-28/synopses.csv')
+cpi <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-28/cpi.csv')
+pre_1985_starts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-28/pre-1985-starts.csv')
+
+### TRouble Shooting
+grosses_orig <- readr::read_csv('https://raw.githubusercontent.com/tacookson/data/master/broadway-grosses/grosses.csv')
+
+```
+
+
+I don't have a ton of domain knowledge, so I'm not quite sure what the best option is. Maybe a bumpchart or bar chart race?
+
+
+```{r standing room only}
+
+
+grosses %>%
+  mutate(week_ending = as.Date(week_ending))%>%
+  mutate(month = lubridate::month(week_ending),
+          year = lubridate::year(week_ending)) %>%
+  filter(year >= 1995) %>%
+  mutate(weekly_potential_seats = seats_in_theatre*performances,
+         sold_vs_potential = seats_sold/weekly_potential_seats) %>%
+  group_by(show) %>%
+  summarise(seats_sold = mean(seats_sold), 
+            potential_sold = mean(weekly_potential_seats),
+            pct_capacity = max(pct_capacity, na.rm = T)) %>%
+  mutate(pct_capacity_calc = potential_sold/pct_capacity)%>%
+  filter(potential_sold <= seats_sold)%>%
+  mutate(show = fct_reorder(show, seats_sold)) %>% 
+  arrange(desc(seats_sold)) %>%
+  head(5) %>%
+   pivot_longer(cols = c(potential_sold, seats_sold), names_to ="type") %>%
+  ggplot(aes(y = show))+
+  geom_line(aes(x= value), color = "#AC78BA")+
+  geom_point(aes(x= value, color = type), size = 2)+
+  theme_delabj()+
+  scale_color_manual(values = c( "#83B692","#AC78BA"))+
+  labs(title = "Standing Room Only:",
+       subtitle = "Top 5 shows that had more <b style = 'color:#AC78BA'> seats sold </b> than 
+       <b style = 'color:#83B692'> potential seats</b>",
+       x="Seats",
+       y="", 
+       caption = "Data: Playbill/TidyTuesday\n
+      Viz: @delabjl")+
+  theme(plot.subtitle = element_markdown())+
+  legend_none()
+
+ggsave("standing_room.png", dpi=320, type="cairo")
+  
+
+```
+
+
+```{r Least Filled}
+
+
+grosses %>%
+  mutate(week_ending = as.Date(week_ending))%>%
+  mutate(month = lubridate::month(week_ending),
+          year = lubridate::year(week_ending)) %>%
+  filter(year >= 1995) %>%
+  mutate(weekly_potential_seats = seats_in_theatre*performances,
+         sold_vs_potential = seats_sold/weekly_potential_seats) %>%
+  group_by(show) %>%
+  summarise(seats_sold = mean(seats_sold), 
+            potential_sold = mean(weekly_potential_seats),
+            pct_capacity = max(pct_capacity, na.rm = T)) %>%
+  mutate(pct_capacity_calc = potential_sold/pct_capacity)%>%
+  filter(potential_sold >= seats_sold)%>%
+    filter(seats_sold > 0 )%>%
+  mutate(show = fct_reorder(show, pct_capacity)) %>% 
+  arrange(pct_capacity) %>%
+  head(5) %>%
+   pivot_longer(cols = c(potential_sold, seats_sold), names_to ="type") %>%
+  ggplot(aes(y = show))+
+  geom_line(aes(x= value), color = "#AC78BA")+
+  geom_point(aes(x= value, color = type), size = 2)+
+  theme_delabj()+
+  scale_color_manual(values = c( "#83B692","#AC78BA"))+
+  labs(title = "Private Showings:",
+       subtitle = "The 5 Shows with the lowest mean <b style = 'color:#AC78BA'> Seats Sold </b> to 
+       <b style = 'color:#83B692'> Potential Seats</b> ratio",
+       x="Seats",
+       y="", 
+       caption = "Data: Playbill/TidyTuesday\n
+      Viz: @delabjl")+
+  theme(plot.subtitle = element_markdown())+
+  legend_none()
+
+ggsave("private.png", dpi=320, type="cairo")
+  
+
+```
+
+```{r popular}
+grosses %>%
+  mutate(week_ending = as.Date(week_ending))%>%
+  mutate(month = lubridate::month(week_ending),
+          year = lubridate::year(week_ending)) %>%
+  filter(year >= 1995) %>%
+  mutate(weekly_potential_seats = seats_in_theatre*performances,
+         sold_vs_potential = seats_sold/weekly_potential_seats) %>%
+  group_by(show) %>%
+  summarise(seats_sold = mean(seats_sold), 
+            potential_sold = mean(weekly_potential_seats),
+            pct_capacity = max(pct_capacity, na.rm = T)) %>%
+  mutate(pct_capacity_calc = potential_sold/pct_capacity)%>%
+    filter(seats_sold > 0 )%>%
+  mutate(show = fct_reorder(show, desc(pct_capacity))) %>% 
+  arrange(desc(pct_capacity) )%>%
+  head(5) %>%
+   pivot_longer(cols = c(potential_sold, seats_sold), names_to ="type") %>%
+  ggplot(aes(y = show))+
+  geom_line(aes(x= value), color = "#AC78BA")+
+  geom_point(aes(x= value, color = type), size = 2)+
+  theme_delabj()+
+  scale_color_manual(values = c( "#83B692","#AC78BA"))+
+  labs(title = "Popular:",
+       subtitle = "The 5 Shows with the highest mean <b style = 'color:#AC78BA'> Seats Sold </b> to 
+       <b style = 'color:#83B692'> Potential Seats</b> ratio",
+       x="Seats",
+       y="", 
+       caption = "Data: Playbill/TidyTuesday\n
+      Viz: @delabjl")+
+  theme(plot.subtitle = element_markdown())+
+  legend_none()
+
+ggsave("popular.png", dpi=320, type="cairo")
+
+```
