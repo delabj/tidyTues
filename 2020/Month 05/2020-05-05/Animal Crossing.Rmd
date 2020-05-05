@@ -1,0 +1,126 @@
+---
+title: "Animal Crossing"
+author: "Joshua de la Bruere"
+date: "5/5/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Fetching the data/setup
+
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweeks to ggplot, and custom themes)
+
+```{r setup, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(forcats)
+
+critic <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/critic.tsv')
+user_reviews <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/user_reviews.tsv')
+items <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/items.csv')
+villagers <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/villagers.csv')
+
+```
+
+
+## EDA
+
+I'm not actually that familiar with animal crossing, I think it's a sims type game? So I might as well take a look at what the data has in store
+
+```{r} 
+summary(critic)
+summary(user_reviews)
+summary(items)
+summary(villagers)
+
+
+
+critic %>% 
+  ggplot(aes(x=grade))+
+  geom_histogram(aes(y = stat(density)),  binwidth = 2)+
+  geom_density(size = 1)+
+  ggtitle("Critic Grades")
+
+
+
+user_reviews %>% 
+  ggplot(aes(x=grade))+
+  geom_histogram(aes(y = stat(density)), binwidth = 1)+
+  geom_density(size = 1)+
+  ggtitle("User Grades")
+  
+
+glimpse(items) %>%
+  ggplot(aes(x=buy_value , y= sell_value))+
+  geom_point()+
+  geom_smooth()
+
+
+villagers %>%
+  ggplot(aes(x=species, fill= gender))+
+  geom_bar(position = position_dodge()) +
+  facet_wrap(~personality)
+  
+```
+That seems a bit odd, the personalities are split by gender!
+
+```{r}
+
+order <- villagers %>%
+  mutate(species = as.factor(species)) %>%
+  group_by(species) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  ungroup()%>%
+  mutate(species = as.factor(species)) %>%
+  mutate(species =fct_reorder(species, desc(n)))
+  
+
+
+villagers %>%
+  mutate(species = factor(species, 
+                          levels = order$species), 
+         personality = factor(personality, 
+                              levels = c("cranky", "jock", "lazy", "smug", 
+                                         "normal", "peppy", "snooty", "uchi")
+                              )
+         ) %>% 
+  group_by(species, gender, personality) %>%
+  count() %>%
+  ggplot(aes(y= species, x=n, fill = gender))+
+  geom_bar(stat="identity", position = position_dodge())+
+  facet_wrap(~personality, ncol=4)+
+  scale_y_discrete(limits = rev(levels(order$species)))+
+  labs(title="<b style = 'color:#5D5D5D'>Animal Crossing: Personality & Gender By Species</b>", 
+       subtitle = "<i style = 'color:#5D5D5D'> There are <b style = 'color:#7EBBAC'>Male </b> & <b style = 'color:#ED4030'>Female</b> Exclusive Personalities</i>", 
+       x="", y="", 
+       caption = "<i style = 'color:#5D5D5D'> Data: VillagerDB <br>Viz: @delabjl   </i>")+
+  ggcute::theme_sugarpill()+
+  theme(plot.title.position = "plot")+
+  ggcute::scale_fill_sugarpill(reverse = T)+
+  legend_none()+
+  theme(plot.subtitle = element_markdown(),
+        plot.title = element_markdown(),
+        plot.caption = element_markdown())
+
+
+ggsave(filename = "Personality_gender.png", dpi=320, units = "in", width = 16, height= 9, type ="cairo")
+
+```
