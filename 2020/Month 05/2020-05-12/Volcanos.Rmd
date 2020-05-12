@@ -1,0 +1,163 @@
+---
+title: "Volcanos"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fetching the data/setup
+
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweeks to ggplot, and custom themes)
+
+```{r setup, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(forcats)
+
+volcano <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-12/volcano.csv')
+eruptions <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-12/eruptions.csv')
+events <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-12/events.csv')
+tree_rings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-12/tree_rings.csv')
+sulfur <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-12/sulfur.csv')
+
+```
+
+
+## EDA
+
+```{r EDA}
+library(ggplot2)
+volcano %>% summary()
+eruptions %>% summary()
+
+world <- map_data("world")
+
+
+eruptions %>% 
+  left_join()
+  ggplot(world, aes(x=lat, y=long))+
+  geom_sf()
+```
+
+
+I wanted to make a hex grid showing the locations of volcanos (ala Bob Rudis and Pirates!), but I'm stuck on a windows machine, which means I can't update my proj4 library. 
+```{r hexgrid}
+library(sf)
+library(glue)
+library(rnaturalearth)
+
+
+
+
+ne_countries(scale = "medium", returnclass = "sf") %>%
+  filter(name != "Antarctica") -> world
+
+st_read(here::here("data/oceans/ne_110m_ocean.shp"), package="sf") %>%
+  select(scalerank, geometry) -> ocean
+
+ocean <- ne_download(scale = 50, type = 'ocean', category = 'physical', returnclass = "sf")
+
+## Reading layer `ne_110m_ocean' from data source `/Users/hrbrmstr/books/30-day-map-challenge/data/ocean/ne_110m_ocean.shp' using driver `ESRI Shapefile'
+## Simple feature collection with 2 features and 2 fields
+## geometry type:  POLYGON
+## dimension:      XY
+## bbox:           xmin: -180 ymin: -85.60904 xmax: 180 ymax: 90
+## epsg (SRID):    4326
+## proj4string:    +proj=longlat +datum=WGS84 +no_defs
+
+
+if (!file.exists(here::here("data/ocean-grid-250.rds"))) {
+
+  st_make_grid(
+    world,
+    n = c(250, 250), # grid granularity
+    crs = st_crs(world),
+    what = "polygons",
+    square = FALSE # hex!
+  ) -> grid
+
+  grid <- st_sf(index = 1:length(lengths(grid)), grid)
+
+  saveRDS(grid, here::here("data/ocean-grid-250.rds"))
+
+}
+
+grid <- readRDS(here::here("data/ocean-grid-250.rds"))
+
+
+
+if (!file.exists(here::here("data/ocean-grid2-250.rds"))) {
+
+  st_make_grid(
+    ocean,
+    n = c(250, 250), # grid granularity
+    crs = st_crs(ocean),
+    what = "polygons",
+    square = FALSE # hex!
+  ) -> grid2
+
+  grid2 <- st_sf(index = 1:length(lengths(grid2)), grid2)
+
+  saveRDS(grid2, here::here("data/ocean-grid2-250.rds"))
+
+}
+
+grid2 <- readRDS(here::here("data/ocean-grid2-250.rds"))
+
+```
+
+
+I want to get a count of events by volcano. 
+
+```{r events_count}
+eruptions %>%
+  group_by(volcano_number, latitude, longitude) %>%
+  count()->eruptions_count
+
+```
+
+
+
+```{r}
+
+ggplot() +
+  geom_sf(data = world, fill = "#666666", color = "black", size = 0.0725) +
+  geom_hex(data =  eruptions_count, aes(y=latitude, x=longitude),bins=90, alpha=0.8)+
+    theme_delabj_dark()+
+  scale_fill_viridis_c(option="inferno", 
+                        name="", 
+                        guide = guide_colorbar(
+                          direction = 'horizontal',
+                          
+                          title.position = 'top', 
+                          title.hjust = 0.5, 
+                          label.position = "bottom",
+                          barwidth = 20,
+                          barheight = .5
+    
+  ))+
+  gridlines_off()+
+  labs(x="", y="", 
+       title="Hot Stuff: Density of Eruptions", 
+       caption = "@delabjl")+
+  theme(axis.text = element_blank(), 
+        plot.caption = element_text(size = 8, hjust = 1), 
+        legend.text = element_text(size = 8))
+
+
+```
