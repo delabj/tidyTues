@@ -64,8 +64,7 @@ library(rnaturalearth)
 
 
 
-ne_countries(scale = "medium", returnclass = "sf") %>%
-  filter(name != "Antarctica") -> world
+ne_countries(scale = "medium", returnclass = "sf")  -> world
 
 st_read(here::here("data/oceans/ne_110m_ocean.shp"), package="sf") %>%
   select(scalerank, geometry) -> ocean
@@ -122,7 +121,41 @@ grid2 <- readRDS(here::here("data/ocean-grid2-250.rds"))
 ```
 
 
-I want to get a count of events by volcano. 
+I want to get a count of events by volcano. But events is kinda messy. 
+
+
+```{r cleaning event type}
+events_cleaned <- events %>% 
+  mutate(event_type=tolower(event_type)) %>%
+  mutate(event_type=case_when(grepl("ash", event_type)~ "Ash & Debris",
+                              grepl("smoke", event_type)~ "Ash & Debris",
+                              grepl("bomb", event_type)~ "Ash & Debris",
+                              grepl("lapilli", event_type)~ "Ash & Debris",
+                              grepl("tephra", event_type)~ "Ash & Debris",
+                              grepl("ejecta", event_type)~ "Ash & Debris",
+                              grepl("debris", event_type)~ "Ash & Debris",
+                              grepl("earthquake", event_type)~"Earthquake",
+                              grepl("seismicity", event_type)~"Earthquake",
+                              grepl("tremor", event_type)~"Earthquake",
+                              grepl("explosion", event_type)~"Eruption",
+                              grepl("eruption", event_type)~"Eruption",
+                              grepl("pyroclastic flow", event_type)~"Eruption",
+                              grepl("lava", event_type)~"Lava",
+                              grepl("degassing", event_type)~"Lava",
+                              grepl("formation", event_type)~"Formation",
+                              grepl("block", event_type)~"Formation",
+                              grepl("fumarolic", event_type)~"Formation",
+                              grepl("pumice", event_type)~"Formation",
+                              grepl("scoria", event_type)~"Formation",
+                              grepl("water", event_type)~"Water Disaster", 
+                              grepl("tsunami", event_type)~"Water Disaster",
+                              grepl("jokulhaup", event_type)~"Water Disaster",
+                              grepl("mud", event_type)~"Water Disaster",
+                              grepl("phreatic", event_type)~"Water Disaster",
+                              grepl("vei", event_type) ~"VEI", 
+
+                              TRUE~"Other"))
+```
 
 ```{r events_count}
 eruptions %>%
@@ -130,6 +163,11 @@ eruptions %>%
   count()->eruptions_count
 
 ```
+
+
+
+
+
 
 
 
@@ -160,4 +198,93 @@ ggplot() +
         legend.text = element_text(size = 8))
 
 
+```
+
+
+If I'm being honest, I think I'm getting stuck on the map. This is far less interesting than I expected it to be. 
+
+
+
+Let's try looking at a few other things like activity over time. I'll start with start date. 
+
+```{r activity_over_time}
+
+start_year <- 1800
+
+eruption_only <-  events_cleaned %>% 
+  group_by(event_date_year, event_type)%>%
+  filter(event_type == "erruption",
+         event_date_year >= start_year
+         ) %>%
+    count() %>%
+  ungroup() %>%
+  arrange(event_date_year)
+
+all_events<- events_cleaned %>% 
+  group_by(event_date_year, event_type)%>%
+  filter(event_type != "VEI",
+         #event_type != "Other",
+         event_date_year >= start_year
+         ) %>%
+    count() %>%
+  ungroup() %>%
+  arrange(event_date_year) %>%
+ mutate(event_type = factor(event_type, levels = c("Eruption", "Lava", "Ash & Debris", "Earthquake", "Formation", "Water Disaster", "Other") ))
+
+
+ vol_events_plot <-  ggplot()+
+  geom_point(data= all_events, aes(x=event_date_year, y=n, fill = event_type, color=event_type))+
+  geom_point(data = eruption_only, aes(x=event_date_year, y=n, fill = event_type, color =event_type))+
+  theme_delabj_dark()+
+  scale_color_delabj()+
+  scale_fill_delabj()+
+  guides(col=guide_legend(
+    direction = "horizontal",
+    title.position = "top",
+    label.position = "bottom",
+    nrow = 1,
+    override.aes = list(shape = 22, size = 5)))+
+  labs(
+    title="Observed Volcanic Activity by Year", 
+    x="", y="", 
+  caption =  "Data: The Smithsonian \n Viz: @delabjl"   )+
+  theme(legend.title = element_blank())+
+  theme(plot.caption = element_text(hjust = 1, size = 10))
+ 
+volcano_cleaned<- volcano %>%
+  mutate(last_eruption_year= case_when(
+    grepl("Unknown", last_eruption_year)~ NA_character_, 
+    TRUE~last_eruption_year)) %>%
+  mutate(last_eruption_year = as.numeric(last_eruption_year))
+ 
+vol_loc_plot <- ggplot() +
+  geom_sf(data = world, fill = "#666666", color = "black", size = 0.0725)+
+  geom_point(data=volcano_cleaned %>% filter(last_eruption_year >= start_year), aes(y=latitude, x=longitude, color = last_eruption_year), alpha = 0.5, size=.5)+
+  scale_color_viridis_c(option="magma", 
+                        name="", 
+                        guide = guide_colorbar(
+                          direction = 'horizontal',
+                          
+                          title.position = 'top', 
+                          title.hjust = 0.125, 
+                          label.position = "bottom",
+                          barwidth = 15,
+                          barheight = .5
+    
+  ))+
+  theme_delabj_dark()+
+  labs(title="Hot Spots: Locations of Last Eruption Since 1800",
+       x="",
+       y="")+
+  theme(legend.title=element_blank(), 
+        plot.caption = element_text(hjust = 1, size = 10))+
+  gridlines_off()
+
+
+
+ggsave("vol_events.png", plot= vol_events_plot, width = 10, height = 6, dpi=320, type="cairo")
+ggsave("vol_loc.png", plot= vol_loc_plot, width = 5, height = 4, dpi=320, type="cairo")
+
+
+ 
 ```
