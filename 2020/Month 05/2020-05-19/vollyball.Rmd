@@ -1,0 +1,291 @@
+---
+title: "Beach Volleyball"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Fetching the data/setup
+
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweeks to ggplot, and custom themes)
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(forcats)
+
+
+
+vb_matches <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-19/vb_matches.csv', guess_max = 76000)
+
+```
+
+## Data Cleaning
+
+I want to look at how individual players preformed. Normally I'd use pivot longer, but I'm not sure how to do that with multiple columns efficently. 
+
+```{r}
+winners_p1 <- vb_matches %>%
+  select(
+    circuit,
+    tournament,
+    "tournament_country" = country,
+    year,
+    date,
+    gender,
+    match_num,
+    "player" = w_player1,
+    "birthday" = w_p1_birthdate,
+    "age"= w_p1_age, 
+    "height" = w_p1_hgt,
+    "country" = w_p1_country,
+    "total_attacks" = w_p1_tot_attacks,
+    "total_kills" = w_p1_tot_kills,
+    "total_errors" = w_p1_tot_errors,
+    "total_hit_pct" = w_p1_tot_hitpct,
+    "total_aces" = w_p1_tot_aces,
+    "total_serve_errors" = w_p1_tot_serve_errors,
+    "total_blocks" = w_p1_tot_blocks,
+    "total_digs" = w_p1_tot_digs
+     
+    ) %>%
+   mutate(status =  "Win", 
+          player_num = 1) 
+
+
+winners_p2 <- vb_matches %>%
+  select(
+    circuit,
+    tournament,
+    "tournament_country" = country,
+    year,
+    date,
+    gender,
+    match_num,
+    "player" = w_player2,
+    "birthday" = w_p2_birthdate,
+    "age"= w_p2_age, 
+    "height" = w_p2_hgt,
+    "country" = w_p2_country,
+    "total_attacks" = w_p2_tot_attacks,
+    "total_kills" = w_p2_tot_kills,
+    "total_errors" = w_p2_tot_errors,
+    "total_hit_pct" = w_p2_tot_hitpct,
+    "total_aces" = w_p2_tot_aces,
+    "total_serve_errors" = w_p2_tot_serve_errors,
+    "total_blocks" = w_p2_tot_blocks,
+    "total_digs" = w_p2_tot_digs
+     
+    ) %>%
+   mutate(status =  "Win", 
+          player_num = 1) 
+
+
+loser_p1 <- vb_matches %>%
+  select(
+    circuit,
+    tournament,
+    "tournament_country" = country,
+    year,
+    date,
+    gender,
+    match_num,
+    "player" = l_player1,
+    "birthday" = l_p1_birthdate,
+    "age"= l_p1_age, 
+    "height" = l_p1_hgt,
+    "country" = l_p1_country,
+    "total_attacks" = l_p1_tot_attacks,
+    "total_kills" = l_p1_tot_kills,
+    "total_errors" = l_p1_tot_errors,
+    "total_hit_pct" = l_p1_tot_hitpct,
+    "total_aces" = l_p1_tot_aces,
+    "total_serve_errors" = l_p1_tot_serve_errors,
+    "total_blocks" = l_p1_tot_blocks,
+    "total_digs" = l_p1_tot_digs
+     
+    ) %>%
+   mutate(status =  "Loss", 
+          player_num = 2) 
+
+
+loser_p2 <- vb_matches %>%
+  select(
+    circuit,
+    tournament,
+    "tournament_country" = country,
+    year,
+    date,
+    gender,
+    match_num,
+    "player" = l_player2,
+    "birthday" = l_p2_birthdate,
+    "age"= l_p2_age, 
+    "height" = l_p2_hgt,
+    "country" = l_p2_country,
+    "total_attacks" = l_p2_tot_attacks,
+    "total_kills" = l_p2_tot_kills,
+    "total_errors" = l_p2_tot_errors,
+    "total_hit_pct" = l_p2_tot_hitpct,
+    "total_aces" = l_p2_tot_aces,
+    "total_serve_errors" = l_p2_tot_serve_errors,
+    "total_blocks" = l_p2_tot_blocks,
+    "total_digs" = l_p2_tot_digs
+     
+    ) %>%
+   mutate(status =  "Loss", 
+          player_num = 2) 
+
+
+player_data <- rbind(winners_p1, winners_p2 %>% rbind(loser_p1%>% rbind(loser_p2))) 
+
+
+# player_data <- player_data %>% 
+#   replace_na(
+#     list(
+#       total_attacks = 0,
+#       total_kills = 0,
+#       total_errors = 0,
+#       total_hit_pct = 0,
+#       total_aces = 0,
+#       total_serve_errors = 0,
+#       total_blocks = 0,
+#       total_digs = 0
+#     )
+#     
+#   )
+
+```
+
+## EDA
+
+```{r}
+player_data %>%
+  summary
+
+```
+
+players by country seemed like an interesting place to start, but there was mostly just a lot of US players
+
+```{r}
+
+player_data %>% 
+  group_by(country) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(country=fct_reorder(country, n)) %>%
+  arrange(desc(n)) %>%
+  head() %>%
+  ggplot(aes(y=country, x= n))+
+  geom_bar(stat="identity")
+
+```
+
+
+```{r}
+player_data %>%
+  group_by(status, gender) %>%
+  summarize(mean_attacks=mean(total_attacks)) %>%
+  ggplot(aes(y=status, x= mean_attacks))+
+  geom_bar(aes(fill=gender), stat="identity", position = "dodge")
+
+player_data %>%
+  group_by(status, gender) %>%
+  summarize(mean_kills=mean(total_kills)) %>%
+  ggplot(aes(y=status, x= mean_kills))+
+  geom_bar(aes(fill=gender), stat="identity", position = "dodge")
+
+player_data %>%
+  group_by(status, gender) %>%
+  summarize(mean_hit_pct=mean(total_hit_pct)) %>%
+  ggplot(aes(y=status, x= mean_hit_pct))+
+  geom_bar(aes(fill=gender), stat="identity", position = "dodge")
+
+player_data %>%
+  group_by(status, gender) %>%
+  summarize(mean_aces=mean(total_aces)) %>%
+  ggplot(aes(y=status, x= mean_aces))+
+  geom_bar(aes(fill=gender), stat="identity", position = "dodge")
+
+player_data %>%
+  group_by(status, gender) %>%
+  summarize(mean_serve_errors=mean(total_serve_errors)) %>%
+  ggplot(aes(y=status, x= mean_serve_errors))+
+  geom_bar(aes(fill=gender), stat="identity", position = "dodge")
+
+player_data %>%
+  group_by(status, gender) %>%
+  summarize(mean_blocks=mean(total_blocks)) %>%
+  ggplot(aes(y=status, x= mean_blocks))+
+  geom_bar(aes(fill=gender), stat="identity", position = "dodge")
+
+```
+
+
+## Building a Viz
+
+Maybe density ridges would be interesting? 
+  - for count data this would look weird.
+  - trying bar plot
+
+```{r}
+library(ggridges)
+
+player_data %>% 
+  pivot_longer(cols = c(13:20), names_to = "type", values_to = "number") %>%
+  mutate(type = gsub("total_", "", type)) %>%
+  filter(type != "hit_pct") %>%
+  ggplot(aes(x=number))+
+  facet_wrap(~type, ncol =1, scales="free_y")+
+  geom_bar(aes(fill=status, color=status),position = "identity",alpha = .5)+
+  theme_delabj()+
+  scale_fill_delabj()+
+  scale_color_delabj()+
+  xlim(0,40)+
+  labs(x="", y="", 
+       title = "What Makes A Winner?", 
+       subtitle = "<b style= 'color:#83B692'>Winners</b> and <b style = 'color:#721121'>losers</b> Attributes",
+       caption = "Data: Adam Vagnar\nViz @delabjl")+
+  legend_none()+
+  theme(plot.subtitle = element_markdown())
+
+  
+ggsave("winner_att.png", type = "cairo", dpi=320, height= 10, width = 10)
+
+
+player_data %>% 
+  pivot_longer(cols = c(13:20), names_to = "type", values_to = "number") %>%
+  mutate(type = gsub("total_", "", type)) %>%
+  group_by(gender, type) %>%
+  summarize(value = median(number, na.rm = TRUE)) %>%
+  mutate(type=fct_reorder(type, value)) %>%
+  ggplot(aes(y=type, x=value))+
+  geom_bar(aes(fill=gender), stat = "identity", position = "dodge")+
+  theme_delabj()+
+  scale_fill_delabj("retro")+
+  labs(x="", y="", 
+       title = "Does The Playstyle of <b style= 'color:#FCB76D'>Men </b> & <b style = 'color:#008F9B'>Women</b> Differ?" ,
+        caption = "Data: Adam Vagnar\nViz @delabjl")+
+  theme(plot.title = element_markdown())+
+  legend_none()
+
+
+ggsave("gender_att.png", type = "cairo", dpi=320, height= 10, width = 10)
+
+```
