@@ -1,0 +1,215 @@
+---
+title: "Cocktails"
+output: github_document
+---
+
+
+
+## Fetching the data/setup
+
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweeks to ggplot, and custom themes)
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(forcats)
+
+cocktails <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-26/cocktails.csv')
+boston_cocktails <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-26/boston_cocktails.csv')
+```
+
+
+The data is pretty messy. I think a lot of this project will be cleaning this up. 
+For example look at the measure column. 
+```{r}
+glimpse(cocktails$measure)
+```
+It's a character column and units are left attached, fractions remain, and some special notes are included. 
+
+
+A similar issue can be found with the ingredients column. Ingredients that should be (about) the same are listed in different ways. Fresh Lemon Juice vs Lemon Juice. These likely are interchangeable for the most part. 
+
+```{r}
+summary(as.factor(cocktails$ingredient))
+```
+
+I mean look at this bar chart Or try to. There are 130 ingredients that only occur 1 time each. This is out of 333 rows
+
+```{r}
+
+cocktails %>%
+  group_by(ingredient) %>%
+  count() %>%
+  filter(n < 2) %>%
+  ggplot(aes(x=n, y=ingredient))
+```
+
+
+## Data Cleaning
+
+I want to start by cleaning the ingredients. I will start by making the ingrendients all lower case. 
+
+```{r}
+cleaned <- cocktails %>%
+  mutate(ingredient = tolower(ingredient))
+
+cleaned %>%
+  group_by(ingredient) %>%
+  count() %>%
+  filter(n < 2)
+
+```
+
+
+That condenced 10 of the of the individual ingredients and dropped down the total unique ingredients to 306. Small victories. 
+
+I think the next step is to remove a few specific words like fresh. 
+
+```{r}
+cleaned <- cocktails %>%
+  mutate(ingredient = tolower(ingredient)) %>%
+  mutate(ingredient = gsub("fresh", "",ingredient)) %>%
+  # mutate(ingredient = case_when(
+  #   grepl("pepsi", ingredient) ~ "cola",
+  #   TRUE~ingredient
+  # )) %>%
+  mutate(ingredient = str_trim(ingredient))
+
+
+cleaned %>%
+  group_by(ingredient) %>%
+  count() %>%
+  filter(n < 2)
+
+```
+
+
+I think I have an idea for cleaning up the measurements. I'll make a new column using grepl and case when. 
+```{r}
+library(rlang)
+
+
+
+cleaned %>%
+  mutate(units =  case_when(
+    grepl("kg",       measure) ~ "kg",
+    grepl("ml",       measure) ~ "ml", 
+    grepl("ml",       measure) ~ "mL", 
+    grepl("cl",       measure) ~ "cl",
+    grepl("cl",       measure) ~ "cL",
+    grepl("dl",       measure) ~ "dl",
+    grepl("L",        measure) ~ "L", 
+    grepl("oz",       measure) ~ "oz", 
+    grepl("tsp",      measure) ~ "tsp",
+    grepl("tbsp",     measure) ~ "tblsp", 
+    grepl("tblsp",    measure) ~ "tblsp",
+    grepl("cup",      measure) ~ "cup",
+    grepl("pint",     measure) ~ "pint",
+    grepl("pt",       measure) ~ "pt",
+    grepl("quart",    measure) ~ "qt", 
+    grepl("qt",       measure) ~ "qt", 
+    grepl("gal",      measure) ~ "gal",
+    grepl("shot",     measure) ~ "shot",
+    grepl("jigger",   measure) ~ "shot", 
+    grepl("top",      measure) ~ "top",
+    grepl("dash",     measure) ~ "dash",
+    grepl("can",      measure) ~ "can",
+    grepl("bottle",   measure) ~ "bottle",
+    grepl("fifth",    measure) ~ "fith",
+    grepl("wedge",    measure) ~ "wedge",
+    grepl("slice",    measure) ~ "wedge", 
+    grepl("splash",   measure) ~ "splash",
+    grepl("part",     measure) ~ "part",
+    grepl("measure",  measure) ~ "part",
+    grepl("inch",     measure) ~ "in",
+    grepl("drop",     measure) ~ "drop",
+    grepl("juice of", measure) ~ "juice",
+    grepl("glass",    measure) ~ "glass",
+    grepl("spoon",    measure) ~ "tblsp",
+    grepl("twist",    measure) ~ "twist", 
+    grepl("gr",       measure) ~ "gm",
+    grepl("piece",    measure) ~ "piece",
+    grepl("stick",    measure) ~ "piece",
+    grepl("chunk",    measure) ~ "piece",
+    TRUE~"units"
+  )) %>%
+  # mutate(
+  #   measure = gsub("kg",       "", measure, ignore.case = TRUE),
+  #   measure = gsub("ml",       "", measure, ignore.case = TRUE),
+  #   measure = gsub("cl",       "", measure, ignore.case = TRUE),
+  #   measure = gsub("dl",       "", measure, ignore.case = TRUE),
+  #   measure = gsub("L",        "", measure),
+  #   measure = gsub("oz",       "", measure),
+  #   measure = gsub("tsp",      "", measure),
+  #   measure = gsub("tbsp",     "", measure),
+  #   measure = gsub("tblsp",    "", measure),
+  #   measure = gsub("cup",      "", measure),
+  #   measure = gsub("pint",     "", measure),
+  #   measure = gsub("quart",    "", measure),
+  #   measure = gsub("qt",       "", measure),
+  #   measure = gsub("gal",      "", measure),
+  #   measure = gsub("shots",    "", measure, ignore.case = TRUE),
+  #   measure = gsub("shot",     "", measure, ignore.case = TRUE),
+  #   measure = gsub("jigger",   "", measure, ignore.case = TRUE),
+  #   measure = gsub("top",      "", measure, ignore.case = TRUE),
+  #   measure = gsub("up",       "", measure, ignore.case = TRUE),
+  #   measure = gsub("with",     "", measure, ignore.case = TRUE),
+  #   measure = gsub("dash",     "", measure, ignore.case = TRUE),
+  #   measure = gsub("can",      "", measure, ignore.case = TRUE),
+  #   measure = gsub("bottle",   "", measure, ignore.case = TRUE),
+  #   measure = gsub("fifth",    "", measure, ignore.case = TRUE),
+  #   measure = gsub("wedges",   "", measure, ignore.case = TRUE),
+  #   measure = gsub("wedge",    "", measure, ignore.case = TRUE),
+  #   measure = gsub("slice",    "", measure, ignore.case = TRUE),
+  #   measure = gsub("splash",   "", measure, ignore.case = TRUE), 
+  #   measure = gsub("parts",    "", measure, ignore.case = TRUE),
+  #   measure = gsub("part",     "", measure, ignore.case = TRUE),
+  #   measure = gsub("measures", "", measure, ignore.case = TRUE),
+  #   measure = gsub("neasure",  "", measure, ignore.case = TRUE),
+  #   measure = gsub("inch",     "", measure, ignore.case = TRUE),
+  #   measure = gsub("drop",     "", measure, ignore.case = TRUE),
+  #   measure = gsub("juice of", "", measure, ignore.case = TRUE),   
+  #   measure = gsub("glass",    "", measure, ignore.case = TRUE), 
+  #   measure = gsub("spoons",   "", measure, ignore.case = TRUE),
+  #   measure = gsub("spoon",    "", measure, ignore.case = TRUE),
+  #   measure = gsub("twist",    "", measure, ignore.case = TRUE), 
+  #   measure = gsub("gr",       "", measure, ignore.case = FALSE),
+  #   measure = gsub("pieces",   "", measure, ignore.case = TRUE),
+  #   measure = gsub("piece",    "", measure, ignore.case = TRUE),
+  #   measure = gsub("chunks",   "", measure, ignore.case = TRUE),
+  #   measure = gsub("chunk",    "", measure, ignore.case = TRUE),
+  #   measure = gsub("sticks",   "", measure, ignore.case = TRUE),
+  #   measure = gsub("stick",    "", measure, ignore.case = TRUE),
+  #   measure = gsub("cubes",    "", measure, ignore.case = TRUE),
+  #   measure = gsub("cube",     "", measure, ignore.case = TRUE), 
+  #   measure = gsub("crushed",  "", measure, ignore.case = TRUE),
+  #   measure = gsub("fill",     "", measure, ignore.case = TRUE)
+  #   )%>%
+  mutate( measure= gsub("½", "0.5", measure)) %>%
+  mutate( measure = str_replace_all(measure, "([A-z,()]+)", ""),
+         measure = gsub("/n", "", measure)) %>%
+  mutate_if(is.character, list(~na_if(., ""))) %>%
+  mutate(
+    measure = str_trim(measure),
+    measure =gsub(" ", "+", measure)
+    ) %>%
+
+
+
+
+df2[, ]
+
+```
