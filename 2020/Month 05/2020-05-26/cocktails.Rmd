@@ -297,6 +297,23 @@ alc_inged <- converted_to_oz %>%
   ggplot(non_alc_inged,aes(y=fct_reorder(ingredient, desc(rank)), x = total_oz))+
   facet_wrap(~group, scales = "free_y")+
   geom_bar(fill = "#2660A4", stat="identity" )+
+  geom_text(data = data.frame(x = 95.8299310041622,
+y = 2.9,
+label = "<- Wine??? ",
+group = "Non Alcoholic"),
+mapping = aes(x = x,
+y = y,
+label = label),
+angle = 0L,
+lineheight = 1L,
+hjust = 0.3,
+vjust = .05,
+colour = "black",
+family = "poppins",
+fontface = "plain",
+inherit.aes = FALSE,
+show.legend = FALSE)+
+
   delabj::legend_none()+
   labs(
     x="", 
@@ -320,6 +337,51 @@ ggsave("Top_10_by_Alcoholic_content.png", height = 5, width = 10, dpi= 320, type
 Could also be interesting to see this by glass type
 
 ```{r}
+converted_to_oz %>% group_by(glass=tolower(glass)) %>%  count() %>% arrange(desc(n))
+
+glasses <- converted_to_oz %>% 
+  group_by(glass = tolower(glass)) %>% 
+  count() %>% 
+  arrange(desc(n)) %>% 
+  head(6) %>% pull(glass)
+
+
+
+
+converted_to_oz %>%
+  mutate(glass=tolower(glass)) %>%
+  mutate(glass = factor(glass, levels = c(
+    "collins glass",
+     "coffee mug" ,
+    "highball glass",
+    "old-fashioned glass", 
+    "cocktail glass",
+    "shot glass" 
+  )))%>%
+  filter(units == "oz", 
+         glass %in% glasses) %>%
+  group_by(glass, ingredient) %>%
+  summarise(total_oz = mean(in_oz)) %>%
+  ungroup()%>%
+  group_by(glass) %>%
+  top_n(5, total_oz) %>%
+  ungroup() %>%
+  ggplot(aes(y=fct_reorder(ingredient,total_oz), x = total_oz))+
+  facet_wrap(~glass, ncol=3, scales="free_y")+
+  geom_bar(aes(fill=glass ),stat="identity")+
+  scale_fill_delabj()+
+  theme_delabj()+
+  labs(
+    x="",
+    y="",
+    title = "What's in the cup?",
+    subtitle = "Top 5 ingredients for each glass, by mean oz in recipies.",
+    caption = "Data: Kaggle \nViz: @delabjl"
+  )+
+  legend_none()
+
+ggsave("Top_5_ingredients_by_glass.png", height = 5, width = 10, dpi= 320, type="cairo")
+
 
 
 ```
