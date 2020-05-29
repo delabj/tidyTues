@@ -4,7 +4,6 @@ output: github_document
 ---
 
 
-
 ## Fetching the data/setup
 
 As always I begin by fetching the data from the tidytuesday repo. 
@@ -16,7 +15,7 @@ These are the package I plan on using today:
 + patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
 + janitor (makes it easy to clean the names of a data set.)
 + forcats (easy work with factors)
-+ delabj (A personal package that includes a few tweeks to ggplot, and custom themes)
++ delabj (A personal package that includes a few tweaks to ggplot, and custom themes)
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
 
