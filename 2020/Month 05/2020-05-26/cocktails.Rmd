@@ -15,7 +15,7 @@ These are the package I plan on using today:
 + patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
 + janitor (makes it easy to clean the names of a data set.)
 + forcats (easy work with factors)
-+ delabj (A personal package that includes a few tweaks to ggplot, and custom themes)
++ delabj (A personal package that includes a few tweaks to ggplot, and custom themes on github use devtools::install_github("delabj/delabj") to install) 
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
 
@@ -108,7 +108,7 @@ cleaned %>%
 
 I think I have an idea for cleaning up the measurements. I'll make a new column using grepl and case when. 
 ```{r}
-library(rlang)
+library(rlang) # Pretty sure I don't need this, I was testing something that didn't work
 
 
 
