@@ -14,7 +14,9 @@ These are the package I plan on using today:
 + patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
 + janitor (makes it easy to clean the names of a data set.)
 + forcats (easy work with factors)
-+ delabj (A personal package that includes a few tweaks to ggplot, and custom themes on github use devtools::install_github("delabj/delabj") to install) 
++ delabj (A personal package that includes a few tweaks to ggplot, and custom themes on github use
++ wesanderson has some interesting color palettes
+devtools::install_github("delabj/delabj") to install) 
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
 
@@ -23,7 +25,9 @@ library(ggtext)
 library(patchwork)
 library(janitor)
 library(delabj)
+library(wesanderson)
 library(forcats)
+library(ggridges)
 
 firsts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-09/firsts.csv')
 science <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-09/science.csv')
@@ -32,7 +36,75 @@ science <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/ti
 
 I want to examine the data before getting started
 ```{r}
-
-
+firsts %>% glimpse()
+science %>% glimpse()
 
 ```
+
+I think the firsts is probably the one I want to work with first. 
+
+The data was scraped from wikipedia, so there's likely going to be some cleaning if I want to use names of people. 
+
+I want the first person, so this is a really ugly way of doing that.
+
+```{r}
+
+names <- firsts %>% 
+  group_by(category) %>%
+  filter(person != "Gracia Real de Santa Teresa de Mose (later named Fort Mose) in Florida", 
+         accomplishment != "First separate African-American church",
+         accomplishment != "First African-American U.S. military regiment"
+   )%>%
+  top_n(n=-1, year) %>%
+  select(category, person, year) %>%
+    mutate(name = case_when(
+      str_detect(person, "Jupiter Hammon")         ~ "Jupiter Hammon",
+      str_detect(person, "Wentworth Cheswell")     ~ "Wentworth Cheswell",
+      str_detect(person, "James Derham")           ~ "James Derham",
+      str_detect(person, "Rev. Lemuel Haynes")     ~ "Rev. Lemuel Haynes",
+      str_detect(person, "Macon Allen")            ~ "Macon Allen",
+      str_detect(person, "Joseph Jenkins Roberts") ~ "Joseph Jenkins Roberts",
+      str_detect(person, "Major Taylor")           ~ "Major Taylor",
+      str_detect(person, "Absalom Boston")         ~ "Absalom Boston",
+      TRUE ~ person
+    ))
+
+
+first_by_cat <- firsts %>% 
+  group_by(year, category) %>%
+  count(year) %>%
+  arrange(desc(n))
+
+
+  ggplot()+
+    geom_point(data = first_by_cat, aes(x=year, y=fct_rev(category), size=n,color=category),alpha=0.65, pch=16)+
+    #geom_text(data= names, aes(x=year, y= category, label=name), nudge_y = 0.15)+
+    delabj::theme_delabj()+
+    labs(color=NULL,
+       size = "Number of Firsts", 
+       x="",
+       y="", 
+       title = "African American Achievements",
+       subtitle = "Firsts in each category by year")+
+    delabj::scale_color_delabj()+
+    delabj::legend_none()
+  
+  ggsave("bubble_firsts.png", dpi=320, height = 5, width = 10, type="cairo")
+  
+  ggplot(data = firsts, aes(x=year, y=fct_rev(category), fill=category))+
+    geom_density_ridges(rel_min_height = 0.005, alpha = .75)+
+    delabj::theme_delabj()+
+    labs(color=NULL,
+       size = "Number of Firsts", 
+       x="",
+       y="", 
+       title = "African American Achievements",
+       subtitle = "Number of firsts in each category by year")+
+    delabj::scale_fill_delabj()+
+    delabj::legend_none()
+  
+    ggsave("ridgeline_firsts.png", dpi=320, height = 5, width = 10, type="cairo")
+
+```
+
+I ended up not liking how the name felt, so I dropped those. I don't know which chart I like better tbh, they both don't feel super satisfactory to me. I think this is all I have time for this week, but it might be interesting to look at cumulative growth or something like that. 
