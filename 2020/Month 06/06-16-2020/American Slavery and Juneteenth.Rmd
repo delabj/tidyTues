@@ -1,0 +1,69 @@
+---
+title: "American Slavery and Juneteenth"
+author: "Joshua de la Bruere"
+date: "6/16/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fetching the data/setup
+
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweaks to ggplot, and custom themes on github use devtools::install_github("delabj/delabj") to install) 
++ wesanderson has some interesting color palettes
++ gt a newish library by the tidyverse team on the grammar of tables
+
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(wesanderson)
+library(forcats)
+library(gt)
+
+blackpast <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-16/blackpast.csv')
+census <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-16/census.csv')
+slave_routes <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-16/slave_routes.csv')
+african_names <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-16/african_names.csv')
+
+
+```
+
+Today, I feel like it would interesting to practice with gt, though I'm very unfamiliar with the datasets and how much I'll be able to work with the new package. 
+
+First things first, I want to look at the data
+
+```{r examin data}
+blackpast %>% glimpse()
+blackpast %>% head()
+
+
+census %>% glimpse()
+census %>% summary()
+
+
+slave_routes %>% glimpse()
+slave_routes %>% head()
+
+
+african_names %>% glimpse()
+african_names %>% head()
+
+```
+
+If I do pursue working with gt today, the census data seems poised for that. 
