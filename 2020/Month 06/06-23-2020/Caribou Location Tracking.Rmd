@@ -1,0 +1,271 @@
+---
+title: "Caribou Location Tracking"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Fetching the data/setup
+
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweaks to ggplot, and custom themes on github use devtools::install_github("delabj/delabj") to install) 
++ wesanderson has some interesting color palettes
++ various geospatial tools
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(wesanderson)
+library(forcats)
+library(ggridges)
+library(gganimate)
+library(sf)
+library(tmaptools)
+
+
+
+individuals <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-23/individuals.csv')
+locations <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-23/locations.csv')
+
+```
+
+Let's take a look at what we have in the datasets
+```{r}
+glimpse(individuals)
+summary(individuals)
+
+glimpse(locations)
+
+```
+The individuals data set seems to be pretty messy/inconsistent. It's also missing a lot of data.
+for example the number of options in death cause 
+
+```{r}
+individuals$death_cause %>% tolower()%>% as.factor() %>% summary()
+
+```
+First there's a lot of missing data. I'm assuming that means the animal is not dead, which is good! But of those that remain as options there's a lot of variation.  I can clean up a fair amount of these. I think I'll use the following categories:
+
++ predation 
++ collision 
++ accidental
++ unknown 
++ [still alive](https://www.youtube.com/watch?v=Y6ljFaKRTrI)
+
+```{r}
+
+individuals_cleaned <- individuals %>%
+  mutate(
+    death_cause = replace_na(death_cause, "still alive"),
+    death_cause = case_when(
+        str_detect(death_cause, "predation")    ~ "predation",
+        str_detect(death_cause, "collision")    ~ "collision",
+        str_detect(death_cause, "accidental")   ~ "accidental",
+        str_detect(death_cause, "unknown")      ~ "unknown",
+        str_detect(death_cause, "still alive")  ~ "still alive",
+        TRUE ~ "NA"
+    ))
+```
+
+
+When looking at the other columns, there are a lot of NA values. This is likely just because some of the information doesn't apply or wasn't recorded. I'm not sure how much can be done with this data set tbh. It's worth noting that there doesn't seem to be many males in this data set, which might be something mentioned in the origional study. Life stage is also missing a lot of data. 
+
+
+
+```{r}
+individuals_cleaned %>% 
+  ggplot(aes(y=sex))+
+  geom_bar()
+
+
+individuals_cleaned %>% 
+  ggplot(aes(y=life_stage))+
+  geom_bar()
+
+```
+
+So looking at the locations dataframe and we have a much more complete data set. 
+
+
+```{r}
+summary(locations)
+
+```
+There's probably some interesting involving migratory patterns. For example look at how the shapes change between seasons
+
+```{r}
+locations %>%
+  ggplot(aes(x=longitude, y=latitude, color  = study_site))+
+  facet_wrap(~season)+
+  geom_point()+
+  legend_bottom()+
+  theme_delabj()
+
+
+locations %>%
+  mutate(date =  lubridate::date(timestamp)) %>%
+  ggplot(aes(x=longitude, y=latitude, color  = season))+
+  geom_point()+
+  labs(title = "{frame_time}")+
+  legend_bottom()+
+  theme_delabj()+
+  scale_color_delabj()+
+  transition_time(date)+
+  shadow_mark(past = TRUE, future = FALSE, alpha = .1)
+
+locations %>%
+  mutate(date =  lubridate::date(timestamp)) %>%
+  ggplot(aes(x=longitude, y=latitude, color  = season))+
+  geom_point()+
+  labs(title = "{frame_time}")+
+  legend_bottom()+
+  theme_delabj()+
+  scale_color_delabj()+
+  transition_time(date)+
+  shadow_wake(wake_length = .25, alpha = .1)
+  
+
+```
+
+It looks like there might be a pretty clear look at some migration in that the early 90s?
+
+I wonder if any of the subjects are shared between the sites
+
+```{r}
+# This is likely the worst way to approach this
+
+locations %>%
+  group_by(animal_id, study_site) %>%
+  count() %>%
+  arrange(animal_id) %>%
+  ungroup %>%
+  select(animal_id) %>%
+  group_by(animal_id) %>% 
+  count() %>% 
+  arrange(n)
+
+
+locations %>% 
+  group_by(season) %>%
+  count()
+
+```
+
+It doesn't look like it (based on the `animal_id`) but it makes me wonder about retagging. I wish I had a shapefile for the survey sites. 
+
+
+
+I want to add these points to an actual map / color by site?
+
+
+```{r}
+locations %>%
+  mutate(date =  lubridate::date(timestamp)) %>%
+  ggplot(aes(x=longitude, y=latitude, color  = study_site))+
+  geom_point()+
+  labs(title = "{frame_time}")+
+  legend_bottom()+
+  theme_delabj()+
+  scale_color_delabj()+
+  transition_time(date)+
+  shadow_wake(wake_length = .5, alpha = .1)
+  
+
+```
+
+Coloring by site seems to hide the movement. 
+
+The roaming locations seem to shrink in the winter season. Though there are fewer recordings in the winter. 
+
+```{r}
+boundries <- ggmap::make_bbox(lat=latitude, lon = longitude, data =locations)
+basemap = ggmap::get_stamenmap(bbox = boundries,  maptype = "watercolor") 
+
+
+
+ggmap::ggmap(basemap)+
+  facet_wrap(~season)+
+  geom_point(data=locations, aes(x=longitude, y=latitude, color  = study_site), alpha = 0.05)+
+  labs(title = "Caribou Roaming By Season",
+       subtitle = "Roaming area of tagged caribou shrinks in the winter",
+       color = "Study Location",
+       x=NULL,
+       y=NULL,
+       caption= "Data: Movebank \nViz: @delabjl")+
+  guides(color= guide_legend(
+    title.position = "top", 
+    title.hjust = .5, 
+    label.position = "bottom",
+    keywidth = 1,
+  keyheight = .25,
+  ncol = 1, 
+  override.aes = c(alpha=1,
+                   shape = 15)
+  ))+
+  theme_delabj()+
+  legend_right()+
+  gridlines_off()+
+  scale_color_delabj()+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+
+ggsave("watercolor_locations.png", dpi = 320, type = "cairo")
+
+
+
+
+```
+
+```{r}
+
+locations_date <- locations %>%
+  mutate(date =  lubridate::date(timestamp))
+
+ggmap::ggmap(basemap) +
+  geom_point(data =locations_date, aes(x=longitude, y=latitude, color  = season))+
+  labs(
+    title = "<b style='color:#721121'>Summer</b> & <b style='color:#AC78BA'>Winter</b> Migrations?",
+    subtitle = "Locations of tagged caribou on {frame_time}",
+    x=NULL,
+    y=NULL,
+    caption= "Data: Movebank \nViz: @delabjl"
+    )+
+  transition_time(date)+
+  shadow_wake(wake_length = .25, alpha = .1)+
+  theme_delabj()+
+  scale_color_manual(values=c("#721121","#AC78BA"))+
+  gridlines_off()+
+    theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  legend_none()+
+  theme(plot.title = element_markdown())
+
+#animate(p, fps = 24, duration = 45 )
+anim_save("big_migration.gif")
+```
+
+I think it would be interesting to follow the route of one of the animals as well as a hex/heatmap of where the caribou live. But I don't have a ton of extra time right now to work on that. 
+
