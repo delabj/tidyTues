@@ -1,0 +1,304 @@
+---
+title: "Exmen Data!"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fetching the data/setup
+
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweaks to ggplot, and custom themes on github use devtools::install_github("delabj/delabj") to install) 
++ wesanderson has some interesting color palettes
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(wesanderson)
+library(forcats)
+library(ggridges)
+library(gganimate)
+
+
+
+comic_bechdel <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-30/comic_bechdel.csv')
+
+character_visualization <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-30/character_visualization.csv')
+
+characters <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-30/characters.csv')
+
+xmen_bechdel <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-30/xmen_bechdel.csv')
+
+covers <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-30/covers.csv')
+
+issue_collaborators <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-30/issue_collaborators.csv')
+
+locations <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-30/locations.csv')
+
+```
+
+I'm particularly excited by this data set cause the X-Men are some of my favorite comic heros. 
+
+
+A few of these data sets seem to be fairly straight forward based on the description alone. I want to start by looking at the bechdel test datasets. I have a  feeling that they wont be passing in general.
+
+
+```{r}
+comic_bechdel %>%
+  drop_na(writer, pass_bechdel) %>%
+  ggplot(aes(x=writer, fill= pass_bechdel))+
+  geom_bar(position = position_dodge())
+
+comic_bechdel %>%
+  drop_na(issue,series, pass_bechdel) %>%
+  ggplot(aes(x=issue, fill= pass_bechdel))+
+  facet_wrap(~series, scales="free_x")+
+  geom_bar(position = position_dodge())
+
+
+
+xmen_bechdel %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=issue, fill= pass_bechdel))+
+  geom_bar(position = position_dodge())
+```
+I'm noticing that the xmen data set has a few issues that are duplicated. I'll use {`janitor`} to see the dupes
+
+```{r}
+xmen_bechdel %>% 
+  janitor::get_dupes()
+xmen_bechdel %>% 
+  select(issue) %>%
+  janitor::get_dupes()
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+  theme_delabj_dark(title_font = "Arial",
+                    main.text.color = "#FCB76D",
+                    sub.text.color = "#FCB76D",
+                    axis.text.color = "#FCB76D", 
+                    title.size = 18)+
+  delabj::legend_none()+
+  labs(title = "<b style = 'color:#FCB76D'> The Uncanny X-MEN</b> ",
+       subtitle = "<span style ='color:#FCB76D'> Comic Issues <b style='color:#008F9B'>Passing</b> or <b = style='color:#AC78BA'> Failing </b> the Bechdel test",
+       caption= "Data: {claremontrun}\nViz:@delabjl"
+       )+
+  scale_fill_manual(values = c("#AC78BA","#008F9B"))+
+  delabj:::gridlines_off()+
+  theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y =element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())+
+  theme(plot.title.position = "panel")+
+  theme(plot.caption = element_text(size=8, 
+                                    family = "Poppins", 
+                                    color = "#FCB76D"))
+
+  ggsave("xmen_bechdel.png", height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+```
+
+I may have spent a little more time and effort than I meant to on this plot. I haven't even gotten to any of the other data!
+
+```{r}
+covers %>%
+  glimpse()
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")+
+  labs(
+    title="Style of The Uncanny X-MEN",
+    subtitle = "The 10 most prolific cover artists", 
+    caption= "Data: {claremontrun}\nViz:@delabjl",
+    fill= "Number of Covers", 
+    y=NULL,
+    x= NULL
+  )+
+
+  scale_fill_gradient(low="#E64E8D", high = "#EE9537" )+
+  theme_delabj_dark(title_font = "Arial",
+                    main.text.color = "#FCB76D",
+                    sub.text.color = "#FCB76D",
+                    axis.text.color = "#FCB76D", 
+                    title.size = 18)+
+    guides(fill= guide_colorbar(
+    title.position = "top",
+    barwidth = 40,
+    barheight = .5,
+    ticks.colour = "black",
+    hjust = .5
+  ))+
+  delabj:::gridlines_minor_off()+
+  theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())+
+  theme(plot.caption = element_text(size=8, 
+                                    family = "Poppins", 
+                                    color = "#FCB76D"))+
+  theme(axis.text.y = element_text(hjust = 0))
+  
+  ggsave("artist_top10.png", height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+```
+
+
+The character dataframe is super rich as well! (Might come back to do some modeling with this at a later date. )
+
+```{r}
+characters %>% glimpse()
+
+characters %>%
+  group_by(character) %>%
+  summarise(captured = sum (captured))%>%
+  ggplot(aes(y=fct_reorder(character, captured), x=captured))+
+  geom_bar(stat = "identity")
+```
+
+I think this is probably prime for pca or clustering. 
+
+in general, I want to split the character column into alias and real name. 
+
+
+To clean up characters I'd start with this: 
+```{r}
+characters %>%
+  separate(character,  c("alias","secret_id"), sep = "=")
+
+```
+To make it so character names are easier to separate out. A similar sort of approach is needed for the covers data
+
+
+```{r}
+tidy_by_char_covers <- covers %>%
+  transmute(issue, cover_artist,
+    character = strsplit( characters_visualized,"\r\n")) %>%
+  unnest(character) %>%
+  mutate(
+    character = trimws(character),
+    #character = str_replace(character, "Dr.", "Doctor"),
+    character = case_when(
+    str_detect(character, "Ant-man")                  ~ "Ant-Man",
+    str_detect(character, "Colossus")                 ~ "Colossus",
+    str_detect(character, "Collosus")                 ~ "Colossus",
+    str_detect(character, "Cyclops")                  ~ "Cyclops",
+    str_detect(character, "Scott Summers")            ~ "Cyclops",
+    str_detect(character, "Dazzler")                  ~ "Dazzler",
+    str_detect(character, "Sentinels")                ~ "Sentinels",
+    str_detect(character, "Nightcrawler")             ~ "Nightcrawler",
+    str_detect(character, "Nightcralwer")             ~ "Nightcrawler",
+    str_detect(character, "Nightcrewler")             ~ "Nightcrawler",
+    str_detect(character, "Wolverine")                ~ "Wolverine",
+    str_detect(character, "Wolverime")                ~ "Wolverine",
+    str_detect(character, "Storm")                    ~ "Storm",
+    str_detect(character, "Storn")                    ~ "Storm",
+    str_detect(character, "Captain Marvel")           ~ "Captain Marvel",
+    str_detect(character, "Carol Danvers")            ~ "Captain Marvel",
+    str_detect(character, "Professor X")              ~ "Professor X",
+    str_detect(character, "Profesor X")               ~ "Professor X",
+    str_detect(character, "Proffessor X")             ~ "Professor X",
+    str_detect(character, "Mystique")                 ~ "Mystique",
+    str_detect(character, "Havok")                    ~ "Havok",
+    str_detect(character, "Alex Summers")             ~ "Havok",
+    str_detect(character, "Kitty Pryde")              ~ "Kitty Pryde",
+    str_detect(character, "Kittty Pryde")             ~ "Kitty Pryde",
+    str_detect(character, "Emma Frost")               ~ "Emma Frost",
+    str_detect(character, "Hellfire Club S")          ~ "Hellfire Club Soldier",
+    str_detect(character, "Hellfire Club s")          ~ "Hellfire Club Soldier",
+    str_detect(character, "Corsair")                  ~ "Corsair",
+    str_detect(character, "Dr.Doom")                  ~ "Doctor Doom",
+    str_detect(character, "Jean Grey")                ~ "Jean Grey",
+    str_detect(character, "Dark Phoenix")             ~ "Jean Grey",
+    str_detect(character, "Phoenix")                  ~ "Jean Grey",
+    str_detect(character, "Lockeed")                  ~ "Lockheed the Dragon",
+    str_detect(character, "The Dragon")               ~ "Lockheed the Dragon",
+    str_detect(character, "Madelyn Prior")            ~ "Madelyne Pryor",
+    str_detect(character, "Madelyn Pryoe")            ~ "Madelyne Pryor",
+    str_detect(character, "Magistates")               ~ "Magistates",
+    str_detect(character, "Sabertooth")               ~ "Sabertooth",
+    str_detect(character, "Sabretooth")               ~ "Sabretooth",
+    str_detect(character, "Sebastain Shaw")           ~ "Sebastian Shaw",
+    str_detect(character, "Sebastin Shaw")            ~ "Sebastian Shaw",
+    str_detect(character, "Sebastian Shaw")           ~ "Sebastian Shaw",
+    str_detect(character, "Sentinal")                 ~ "Sentinal",
+    str_detect(character, "Sleazoid")                 ~ "Sleazoid",
+    str_detect(character, "Starjammers")              ~ "Starjammers",
+    str_detect(character, "StarJammers(all of them)") ~ "Starjammers",
+    str_detect(character, "Archangel")                ~ "Angel",
+    str_detect(character, "Archngel")                 ~ "Angel",
+    TRUE ~ character
+  )) 
+
+
+tidy_by_char_covers %>%
+  group_by(character) %>%
+  count () %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  mutate(start = 0) %>%
+  ggplot()+
+  geom_segment(aes(x=start, xend =n , y =fct_reorder(character, n), yend =fct_reorder(character, n)), color = "#1D90F3")+
+  geom_point(aes(x=n, y = character), size =5, color = "#FFFE03")+
+  labs(
+    title = "The Uncany Faces of The X-MEN",
+    subtitle = "The most prominant characters by cover apperences",
+    caption= "Data: {claremontrun}\nViz:@delabjl",
+    x=NULL, 
+    y=NULL
+  )+
+  theme_delabj_dark(
+    title_font = "Arial",
+    main.text.color = "#FCB76D",
+    sub.text.color = "#FCB76D",
+    axis.text.color = "#FCB76D", 
+    title.size = 18
+  )+
+  delabj:::gridlines_minor_off()+
+  theme(     axis.title.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())+
+  theme(plot.caption = element_text(size=8, 
+                                    family = "Poppins", 
+                                    color = "#FCB76D"))+
+  theme(axis.text.y = element_text(hjust = 0))
+
+  
+
+  ggsave("cover_characters_top10.png", height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+  
+```
+
+

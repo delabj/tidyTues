@@ -1,0 +1,345 @@
+```{r}
+
+
+### This is meant to be run in the same environment as the Rmd file.
+
+`%+=%` = function(e1,e2) eval.parent(substitute(e1 <- e1 + e2)) #might need to add this to {delabj}
+
+
+
+
+## initial plot
+
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  ggplot(aes(y=cover_artist, x=n)) +
+  geom_bar(stat="identity")
+
+n <- 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n)) +
+  geom_bar(stat="identity")
+
+
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")+
+  scale_fill_delabj("zune", discrete = FALSE)
+  
+  n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")+
+  scale_fill_delabj("zune", discrete = FALSE)+
+  theme_delabj_dark()
+
+
+  n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")+
+  scale_fill_gradient(low="#E64E8D", high = "#EE9537" )+
+  theme_delabj_dark()
+    n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")+
+  labs(
+    title="Style of The Uncanny X-MEN",
+    subtitle = "The 10 most prolific cover artists", 
+    caption= "Data: {claremontrun}\nViz:@delabjl"
+  )+
+  scale_fill_gradient(low="#E64E8D", high = "#EE9537" )+
+  theme_delabj_dark()
+
+
+    n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")+
+  labs(
+    title="Style of The Uncanny X-MEN",
+    subtitle = "The 10 most prolific cover artists", 
+    caption= "Data: {claremontrun}\nViz:@delabjl",
+    fill= "Number of Covers", 
+    y=NULL
+  )+
+  scale_fill_gradient(low="#E64E8D", high = "#EE9537" )+
+  theme_delabj_dark()
+
+
+    n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")+
+  labs(
+    title="Style of The Uncanny X-MEN",
+    subtitle = "The 10 most prolific cover artists", 
+    caption= "Data: {claremontrun}\nViz:@delabjl",
+    fill= "Number of Covers", 
+    y=NULL
+  )+
+  scale_fill_gradient(low="#E64E8D", high = "#EE9537" )+
+  theme_delabj_dark(title_font = "Arial",
+                    main.text.color = "#FCB76D",
+                    sub.text.color = "#FCB76D",
+                    axis.text.color = "#FCB76D", 
+                    title.size = 18)+
+  theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())
+
+
+    n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")+
+  labs(
+    title="Style of The Uncanny X-MEN",
+    subtitle = "The 10 most prolific cover artists", 
+    caption= "Data: {claremontrun}\nViz:@delabjl",
+    fill= "Number of Covers", 
+    y=NULL
+  )+
+  scale_fill_gradient(low="#E64E8D", high = "#EE9537" )+
+  theme_delabj_dark(title_font = "Arial",
+                    main.text.color = "#FCB76D",
+                    sub.text.color = "#FCB76D",
+                    axis.text.color = "#FCB76D", 
+                    title.size = 18)+
+  theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())+
+  theme(plot.caption = element_text(size=8, 
+                                    family = "Poppins", 
+                                    color = "#FCB76D"))
+  
+  
+    n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")+
+  labs(
+    title="Style of The Uncanny X-MEN",
+    subtitle = "The 10 most prolific cover artists", 
+    caption= "Data: {claremontrun}\nViz:@delabjl",
+    fill= "Number of Covers", 
+    y=NULL,
+    x= NULL
+  )+
+
+  scale_fill_gradient(low="#E64E8D", high = "#EE9537" )+
+  theme_delabj_dark(title_font = "Arial",
+                    main.text.color = "#FCB76D",
+                    sub.text.color = "#FCB76D",
+                    axis.text.color = "#FCB76D", 
+                    title.size = 18)+
+    guides(fill= guide_colorbar(
+    title.position = "top",
+    barwidth = 40,
+    barheight = .5,
+    ticks.colour = "black",
+    hjust = .5
+  ))+
+  theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())+
+  theme(plot.caption = element_text(size=8, 
+                                    family = "Poppins", 
+                                    color = "#FCB76D"))
+    n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")+
+  labs(
+    title="Style of The Uncanny X-MEN",
+    subtitle = "The 10 most prolific cover artists", 
+    caption= "Data: {claremontrun}\nViz:@delabjl",
+    fill= "Number of Covers", 
+    y=NULL,
+    x= NULL
+  )+
+
+  scale_fill_gradient(low="#E64E8D", high = "#EE9537" )+
+  theme_delabj_dark(title_font = "Arial",
+                    main.text.color = "#FCB76D",
+                    sub.text.color = "#FCB76D",
+                    axis.text.color = "#FCB76D", 
+                    title.size = 18)+
+    guides(fill= guide_colorbar(
+    title.position = "top",
+    barwidth = 40,
+    barheight = .5,
+    ticks.colour = "black",
+    hjust = .5
+  ))+
+  delabj:::gridlines_minor_off()+
+  theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())+
+  theme(plot.caption = element_text(size=8, 
+                                    family = "Poppins", 
+                                    color = "#FCB76D"))
+  
+
+    n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+
+covers %>% 
+  group_by(cover_artist) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(y=fct_reorder(cover_artist, n), x=n, fill = n)) +
+  geom_bar(stat="identity")+
+  labs(
+    title="Style of The Uncanny X-MEN",
+    subtitle = "The 10 most prolific cover artists", 
+    caption= "Data: {claremontrun}\nViz:@delabjl",
+    fill= "Number of Covers", 
+    y=NULL,
+    x= NULL
+  )+
+
+  scale_fill_gradient(low="#E64E8D", high = "#EE9537" )+
+  theme_delabj_dark(title_font = "Arial",
+                    main.text.color = "#FCB76D",
+                    sub.text.color = "#FCB76D",
+                    axis.text.color = "#FCB76D", 
+                    title.size = 18)+
+    guides(fill= guide_colorbar(
+    title.position = "top",
+    barwidth = 40,
+    barheight = .5,
+    ticks.colour = "black",
+    hjust = .5
+  ))+
+  delabj:::gridlines_minor_off()+
+  theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())+
+  theme(plot.caption = element_text(size=8, 
+                                    family = "Poppins", 
+                                    color = "#FCB76D"))+
+  theme(axis.text.y = element_text(hjust = 0))
+
+
+
+    n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+```
+

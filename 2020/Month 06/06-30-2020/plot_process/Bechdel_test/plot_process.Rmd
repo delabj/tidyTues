@@ -1,0 +1,341 @@
+```{r}
+### This is meant to be run in the same environment as the Rmd file.
+
+`%+=%` = function(e1,e2) eval.parent(substitute(e1 <- e1 + e2)) #might need to add this to {delabj}
+
+## initial plot
+
+
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()
+
+n=1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+## step 2
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+  scale_fill_delabj()
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+## step 3
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+  scale_fill_delabj("retro")
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+## step 4
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+  theme_void()+
+  scale_fill_delabj("retro")
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+## step 5
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+    labs(title = "<b style = 'color:#FCB76D'> The Uncanny X-MEN</b> ",
+       subtitle = "Comic Issues <b style='color:#008F9B'>Passing</b> or <b = style='color:#AC78BA'> Failing </b> the Bechdel test",
+       caption= "Data: {claremontrun}\nViz:@delabjl"
+  )+
+  theme_void()+
+  scale_fill_manual(values = c("#AC78BA","#008F9B"))+
+    theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())
+
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+## step 6
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+    labs(title = "<b style = 'color:#FCB76D'> The Uncanny X-MEN</b> ",
+       subtitle = "Comic Issues <b style='color:#008F9B'>Passing</b> or <b = style='color:#AC78BA'> Failing </b> the Bechdel test",
+       caption= "Data: {claremontrun}\nViz:@delabjl"
+  )+
+  theme_void()+
+  legend_none()+
+  scale_fill_manual(values = c("#AC78BA","#008F9B"))+
+    theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())
+
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+    labs(title = " The Uncanny X-MEN",
+       subtitle = "Comic Issues <b style='color:#008F9B'>Passing</b> or <b = style='color:#AC78BA'> Failing </b> the Bechdel test",
+       caption= "Data: {claremontrun}\nViz:@delabjl"
+  )+
+  theme_delabj()+
+  legend_none()+
+  scale_fill_manual(values = c("#AC78BA","#008F9B"))+
+    theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())
+
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+    labs(title = "<b style = 'color:#FCB76D'> The Uncanny X-MEN</b> ",
+       subtitle = "Comic Issues <b style='color:#008F9B'>Passing</b> or <b = style='color:#AC78BA'> Failing </b> the Bechdel test",
+       caption= "Data: {claremontrun}\nViz:@delabjl"
+  )+
+  theme_delabj_dark()+
+  legend_none()+
+  scale_fill_manual(values = c("#AC78BA","#008F9B"))+
+    theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())
+
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+    labs(title = "<b style = 'color:#FCB76D'> The Uncanny X-MEN</b> ",
+       subtitle = "Comic Issues <b style='color:#008F9B'>Passing</b> or <b = style='color:#AC78BA'> Failing </b> the Bechdel test",
+       caption= "Data: {claremontrun}\nViz:@delabjl"
+  )+
+  theme_delabj_dark()+
+  legend_none()+
+  scale_fill_manual(values = c("#AC78BA","#008F9B"))+
+    theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+    theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y =element_blank(),
+        axis.ticks.y=element_blank())
+
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+    labs(title = "<b style = 'color:#FCB76D'> The Uncanny X-MEN</b> ",
+       subtitle = "Comic Issues <b style='color:#008F9B'>Passing</b> or <b = style='color:#AC78BA'> Failing </b> the Bechdel test",
+       caption= "Data: {claremontrun}\nViz:@delabjl"
+  )+
+  theme_delabj_dark()+
+  legend_none()+
+  scale_fill_manual(values = c("#AC78BA","#008F9B"))+
+    theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+    theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y =element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())
+
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+    labs(title = "<b style = 'color:#FCB76D'> The Uncanny X-MEN</b> ",
+       subtitle = " Comic Issues <b style='color:#008F9B'>Passing</b> or <b = style='color:#AC78BA'> Failing </b> the Bechdel test",
+       caption= "Data: {claremontrun}\nViz:@delabjl"
+  )+
+  theme_delabj_dark()+
+  legend_none()+
+  scale_fill_manual(values = c("#AC78BA","#008F9B"))+
+    theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+    theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y =element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())
+
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+    labs(title = "<b style = 'color:#FCB76D'> The Uncanny X-MEN</b> ",
+       subtitle = " Comic Issues <b style='color:#008F9B'>Passing</b> or <b = style='color:#AC78BA'> Failing </b> the Bechdel test",
+       caption= "Data: {claremontrun}\nViz:@delabjl"
+  )+
+  theme_delabj_dark()+
+  legend_none()+
+  delabj:::gridlines_off()+
+  scale_fill_manual(values = c("#AC78BA","#008F9B"))+
+    theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+    theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y =element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())+
+  theme(plot.caption = element_text(size=8, 
+                                    family = "Poppins", 
+                                    color = "#FCB76D"))
+
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+  labs(title = "<b style = 'color:#FCB76D'> The Uncanny X-MEN</b> ",
+       subtitle = "<span style ='color:#FCB76D'> Comic Issues <b style='color:#008F9B'>Passing</b> or <b = style='color:#AC78BA'> Failing </b> the Bechdel test",
+       caption= "Data: {claremontrun}\nViz:@delabjl"
+  )+
+  theme_delabj_dark()+
+  legend_none()+
+  delabj:::gridlines_off()+
+  scale_fill_manual(values = c("#AC78BA","#008F9B"))+
+    theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+    theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y =element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())+
+  theme(plot.caption = element_text(size=8, 
+                                    family = "Poppins", 
+                                    color = "#FCB76D"))
+
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+
+
+
+
+
+xmen_bechdel %>%
+  distinct(issue, .keep_all= TRUE) %>%
+  drop_na(issue, pass_bechdel) %>%
+  ggplot(aes(x=as.factor(issue), fill= pass_bechdel))+
+  geom_bar()+
+  theme_delabj_dark(title_font = "Arial",
+                    main.text.color = "#FCB76D",
+                    sub.text.color = "#FCB76D",
+                    axis.text.color = "#FCB76D", 
+                    title.size = 18)+
+  delabj::legend_none()+
+  labs(title = "<b style = 'color:#FCB76D'> The Uncanny X-MEN</b> ",
+       subtitle = "<span style ='color:#FCB76D'> Comic Issues <b style='color:#008F9B'>Passing</b> or <b = style='color:#AC78BA'> Failing </b> the Bechdel test",
+       caption= "Data: {claremontrun}\nViz:@delabjl"
+  )+
+  scale_fill_manual(values = c("#AC78BA","#008F9B"))+
+  delabj:::gridlines_off()+
+  theme(plot.title = element_markdown(),
+        plot.subtitle = element_markdown())+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y =element_blank(),
+        axis.ticks.y=element_blank())+
+  theme(plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black", colour = NA, size=0),
+        panel.border = element_blank())+
+  theme(plot.title.position = "panel")+
+  theme(plot.caption = element_text(size=8, 
+                                    family = "Poppins", 
+                                    color = "#FCB76D"))
+
+n %+=% 1
+name <- paste0("plot_step_",n, ".png")
+ggsave(name, height = 5, width = 10, dpi = 320,device = "png",  type = "cairo")
+
+
+
+```
