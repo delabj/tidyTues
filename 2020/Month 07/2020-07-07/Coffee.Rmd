@@ -1,0 +1,342 @@
+---
+title: "Coffee Ratings"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fetching the data/setup
+
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweaks to ggplot, and custom themes on github use devtools::install_github("delabj/delabj") to install) 
++ wesanderson has some interesting color palettes
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(wesanderson)
+library(forcats)
+library(ggridges)
+
+
+coffee_ratings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-07/coffee_ratings.csv')
+
+```
+
+
+Let's take a look at the data. I see there's  a unit of measurement column. Will this be something I need to convert?
+
+```{r}
+summary(coffee_ratings)
+glimpse(coffee_ratings)
+
+
+coffee_ratings %>%
+  ggplot(aes(x=unit_of_measurement))+
+  geom_bar()
+
+coffee_ratings %>%
+  ggplot(aes(y=country_of_origin))+
+  geom_bar()
+
+coffee_ratings %>%
+  mutate(certification_body = tolower(trimws(certification_body))) %>%
+  ggplot(aes(y=certification_body))+
+  geom_bar()
+
+
+coffee_ratings %>%
+  mutate(in_country_partner = tolower(trimws(in_country_partner))) %>%
+  ggplot(aes(y=in_country_partner))+
+  geom_bar()
+
+coffee_ratings %>%
+  mutate(in_country_partner = tolower(trimws(in_country_partner))) %>%
+  ggplot(aes(y=in_country_partner))+
+  geom_bar()
+
+
+coffee_ratings_cleaned <- coffee_ratings %>%
+  mutate(certification_body = tolower(trimws(certification_body))) %>%
+  mutate(in_country_partner = tolower(trimws(in_country_partner))) %>%
+  mutate(harvest_year = gsub("[^[:digit:].]", "",  harvest_year),
+         harvest_year = str_extract(harvest_year, "^.{4}")) %>%
+  mutate(country_of_origin = case_when(
+    str_detect(country_of_origin, "United States") ~  "United States", 
+    str_detect(country_of_origin, "Tanzania") ~  "Tanzania", 
+    TRUE ~ country_of_origin
+  ))
+```
+It does look like the altitude has already been converted!
+
+I see a few quality columns, This sort of makes me think about maybe doing a parallel coords plot.
+
+```{r}
+
+df_par <- coffee_ratings_cleaned %>%
+   transmute(
+     country_of_origin,
+        species, 
+    processing_method,
+     total_cup_points, 
+     species, 
+     processing_method,
+     Aroma = scale(aroma), 
+     Acidity = scale(acidity), 
+     Aftertaste = scale(aftertaste), 
+     Balance = scale(balance), 
+     Body = scale(body),
+     Flavor = scale(flavor), 
+     Moisture = scale(moisture), 
+     Sweetness = scale(sweetness),
+     Uniformity = scale(uniformity)
+         ) %>%
+  
+  mutate(row_num = row_number()) %>% 
+  na.omit() %>%
+  pivot_longer(Aroma:Uniformity, names_to = "measure",  values_to = "value") %>%
+  filter(measure != "moisture") 
+
+
+df_par %>%
+  ggplot(aes(x=measure, y=value, color = species, group = row_num)) +
+  geom_line( size = .5, alpha = .5)+
+  theme_minimal()+
+  scale_color_delabj()
+
+df_par %>%
+  ggplot(aes(x=measure, y=value, color = processing_method, group = row_num)) +
+  geom_line( size = .5, alpha = .5)+
+  theme_minimal()+
+  scale_color_delabj()
+
+```
+I'm not particularly liking this. There seems to be a lot of similarities between the species and the processing methods even standardizing the values didn't help much. 
+
+```{r}
+
+coffee_ratings %>% 
+  select(
+    total_cup_points, 
+    species, 
+    processing_method,
+    aroma:moisture
+         ) %>%
+  summary()
+
+
+coffee_ratings %>% 
+  select(
+    total_cup_points, 
+    species, 
+    aroma:moisture
+         ) %>%
+  na.omit() %>%
+  ggplot(aes(x= moisture, y=sweetness , color = species))+
+  geom_jitter()+
+  geom_density2d()
+
+
+```
+
+
+It looks like at least from a 2d perspective that there's not much of a clear separation in species except in sweetness, where Robusta makes up a narrow band in the middle. I might just try to look at a few of the attributes using a raincloud plot?
+
+
+
+```{r set_up_raincloud}
+
+
+# Taken from https://micahallen.org/2018/03/15/introducing-raincloud-plots/
+"%||%" <- function(a, b) {
+  if (!is.null(a)) a else b
+}
+
+geom_flat_violin <- function(mapping = NULL, data = NULL, stat = "ydensity",
+                             position = "dodge", trim = TRUE, scale = "area",
+                             show.legend = NA, inherit.aes = TRUE, ...) {
+  layer(
+    data = data,
+    mapping = mapping,
+    stat = stat,
+    geom = GeomFlatViolin,
+    position = position,
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      trim = trim,
+      scale = scale,
+      ...
+    )
+  )
+}
+
+#' @rdname ggplot2-ggproto
+#' @format NULL
+#' @usage NULL
+#' @export
+GeomFlatViolin <-
+  ggproto("GeomFlatViolin", Geom,
+    setup_data = function(data, params) {
+      data$width <- data$width %||%
+        params$width %||% (resolution(data$x, FALSE) * 0.9)
+
+      # ymin, ymax, xmin, and xmax define the bounding rectangle for each group
+      data %>%
+        group_by(group) %>%
+        mutate(
+          ymin = min(y),
+          ymax = max(y),
+          xmin = x,
+          xmax = x + width / 2
+        )
+    },
+
+    draw_group = function(data, panel_scales, coord) {
+      # Find the points for the line to go all the way around
+      data <- transform(data,
+        xminv = x,
+        xmaxv = x + violinwidth * (xmax - x)
+      )
+
+      # Make sure it's sorted properly to draw the outline
+      newdata <- rbind(
+        plyr::arrange(transform(data, x = xminv), y),
+        plyr::arrange(transform(data, x = xmaxv), -y)
+      )
+
+      # Close the polygon: set first and last point the same
+      # Needed for coord_polar and such
+      newdata <- rbind(newdata, newdata[1, ])
+
+      ggplot2:::ggname("geom_flat_violin", GeomPolygon$draw_panel(newdata, panel_scales, coord))
+    },
+
+    draw_key = draw_key_polygon,
+
+    default_aes = aes(
+      weight = 1, colour = "grey20", fill = "white", size = 0.5,
+      alpha = NA, linetype = "solid"
+    ),
+
+    required_aes = c("x", "y")
+  )
+```
+
+```{r}
+
+
+rain_df <-  coffee_ratings_cleaned %>%
+   select(
+     species, 
+     processing_method,
+     aroma:moisture
+         ) %>%
+  mutate(row_num = row_number()) %>% 
+  pivot_longer(aroma:moisture, names_to = "measure",  values_to = "value") %>%
+  filter(measure != "moisture") 
+
+
+rain_df %>%
+  na.omit() %>%
+  filter( measure %!in% c("uniformity", "sweetness", "clean_cup", "cupper_points")) %>%
+  ggplot(aes(y = value, x = measure, fill = measure))+
+  facet_wrap(~species)+
+  geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8, color = "#696969") +
+  geom_point(aes( color = measure), position = position_jitter(width = .15), size = .5, alpha = 0.5)+
+  geom_boxplot(width = .1, guides = FALSE, outlier.shape = NA, alpha = 0.5, color = "#696969")+
+  coord_flip()+
+  labs(title = "How do you take it?",
+       subtitle = "Distribution of Coffee Profile by species", 
+       x=NULL, 
+       y=NULL, 
+       caption = "Data: Coffee Quality Database\nVis: @delabjl")+
+  theme_delabj_dark()+
+  legend_none()+
+  scale_fill_delabj()+
+  scale_color_delabj()+
+  theme(strip.background = element_blank(),
+        plot.subtitle = element_markdown(), 
+        plot.caption = element_text(size = 8))
+ 
+
+ggsave("coffee_cloud.png", dpi = 320, height = 5, width = 10, type = "cairo")
+```
+
+
+I don't hate the plot, but it's not very interesting imo. I'm still not 100% sure how useful raincloud plots are over violin plots/barplots, or scatter plots. 
+
+
+What about a profile by country or region? I could look at the profile by the top 10 or so countries to see if there's a difference there. 
+
+```{r}
+
+top_10_countries<- coffee_ratings_cleaned %>% 
+  count(country_of_origin, sort = TRUE) %>%
+  head(10) %>%
+  pull(country_of_origin)
+
+coffee_ratings_cleaned %>%
+  filter(country_of_origin %in% top_10_countries
+         ) %>%
+   transmute(
+     country_of_origin,
+     total_cup_points, 
+     species, 
+     processing_method,
+     Aroma = scale(aroma), 
+     Acidity = scale(acidity), 
+     Aftertaste = scale(aftertaste), 
+     Balance = scale(balance), 
+     Body = scale(body),
+     Flavor = scale(flavor), 
+     Moisture = scale(moisture), 
+     Sweetness = scale(sweetness),
+     Uniformity = scale(uniformity)
+         ) %>%
+  na.omit() %>%
+  pivot_longer(Aroma:Uniformity, names_to = "measure",  values_to = "value") %>%
+  group_by(country_of_origin, measure) %>%
+  summarise( median_val = median(value, na.rm = TRUE)) %>%
+  mutate(color = if_else(median_val >=0, "Positive", "negative")) %>%
+  ggplot(aes(y=measure, x = median_val, color = color))+
+  facet_wrap(~country_of_origin, nrow = 2)+
+  geom_segment(aes(x= 0,y=measure, xend = median_val, yend = measure))+
+  geom_point()+
+  labs(
+    title = "Coffee Profiles of The 10 Highest Producing Countries",
+    subtitle = "Attributes <b style = 'color: #008F9B'>Above</b> or <b style = 'color:#FCB76D'>Below</b> the worldwide median", 
+    y=NULL,
+    x=NULL,
+    caption = "Data: Coffee Quality Database\nVis: @delabjl"
+  )+
+  xlim(-1.5,1.5)+
+  theme_delabj_dark()+
+  scale_color_delabj("retro")+
+  theme(strip.background = element_blank(),
+        plot.subtitle = element_markdown(), 
+        plot.caption = element_text(size = 8))+
+  legend_none()
+  
+
+ggsave("top_10_profile.png", dpi = 320, height = 5, width = 10, type = "cairo")
+
+```
+
+
+
+Hmm. not super happy with any of these plots. 

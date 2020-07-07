@@ -31,7 +31,6 @@ library(delabj)
 library(wesanderson)
 library(forcats)
 library(ggridges)
-library(gganimate)
 
 
 
