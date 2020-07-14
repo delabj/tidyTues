@@ -298,7 +298,7 @@ age_of_mission <- astronauts_cleaned %>%
 
 age_of_mission
 
-ggsave( "age_event.png", plot =age_event,  height = 5, width = 10, type="cairo")
+ggsave( "age_mission.png", plot =age_of_mission,  height = 5, width = 10, type="cairo")
 ```
 
 ```{r combine_plots}
