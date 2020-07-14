@@ -1,0 +1,96 @@
+---
+title: "Spaaaaaacccccceeeeee"
+author: "Joshua de la Bruere"
+date: "7/14/2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fetching the data/setup
+
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweaks to ggplot, and custom themes on github use devtools::install_github("delabj/delabj") to install) 
+
+```{r loading, message=FALSE, warning=FALSE, echo=FALSE}
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(wesanderson)
+library(forcats)
+
+
+
+astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-14/astronauts.csv')
+```
+
+This weeks data is about space! Let's take a look at what's in the astronauts database. I'm curious as to what field21 is
+
+```{r EDA1}
+glimpse(astronauts)
+
+# what is field 21? 
+astronauts$field21 %>% summary()
+
+astronauts %>% 
+  ggplot(aes(y= as.factor(field21)))+
+  geom_bar()
+
+astronauts %>%
+  select_if(is.numeric) %>%
+  cor() %>%
+  round(2) %>%
+  data.frame() %>%
+  rownames_to_column() %>%
+  pivot_longer(cols= id:total_eva_hrs, names_to = "columnname", values_to = "correlation") %>%
+  mutate(
+    highlight_cell = if_else(rowname == "field21", TRUE, if_else(columnname == "field21", TRUE, FALSE)),
+         ) %>%
+  ggplot(aes(x=rowname, y=fct_rev(columnname)))+
+  geom_tile(fill= "white", color = "black")+
+  geom_tile(aes(fill = highlight_cell ))+
+  geom_point(aes(size= abs(correlation), color = correlation))+
+  scale_color_gradient2(low= "red", high = "blue", mid = "white")+
+  scale_fill_manual(values= c("white", "grey80"))+
+  scale_x_discrete(position = "top") +
+  labs(
+    x=NULL,
+    y=NULL
+
+  )+
+  guides(color= guide_colorbar(),
+         size = NULL)+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle =  90, hjust = 1))+
+  legend_none()
+
+ggsave("correlation.png", height = 10, width = 10, type="cairo")
+  
+```
+
+
+I think that field21 might be related to eva. Perhaps it's the number of times they had an eva on that mission?
+
+(I did some digging and found the following text in the paper)
+>The following information was included: 1) identification (official and Romanised name, national database ID number, and retirement status); 2) demographics (nationality, sex, year of birth, year of selection, and military background); 3) career statistics (total time spent in space, number of flights, and extra-vehicular activity (EVA) hours); and 4) data on each mission involving the traveler (the name, year, and duration of each mission; ascent/orbit/descent vehicle; and instances of and total EVA time per mission).
+
+
+
+
+```{r datacleaning}
+
+```
+
