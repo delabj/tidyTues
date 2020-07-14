@@ -31,7 +31,8 @@ library(janitor)
 library(delabj)
 library(wesanderson)
 library(forcats)
-
+library(vapoRwave)
+library(ggCyberPunk)
 
 
 astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-14/astronauts.csv')
@@ -78,6 +79,7 @@ astronauts %>%
   legend_none()
 
 ggsave("correlation.png", height = 10, width = 10, type="cairo")
+
   
 ```
 
@@ -87,10 +89,226 @@ I think that field21 might be related to eva. Perhaps it's the number of times t
 (I did some digging and found the following text in the paper)
 >The following information was included: 1) identification (official and Romanised name, national database ID number, and retirement status); 2) demographics (nationality, sex, year of birth, year of selection, and military background); 3) career statistics (total time spent in space, number of flights, and extra-vehicular activity (EVA) hours); and 4) data on each mission involving the traveler (the name, year, and duration of each mission; ascent/orbit/descent vehicle; and instances of and total EVA time per mission).
 
+[The paper can be found here](https://www.sciencedirect.com/science/article/pii/S2214552420300444 )
+
+I want to quickly look at the other fields as well, though the data seems in general fairly clean.
+
+```{r}
+astronauts %>%
+  count(name) %>%
+  arrange(name)
+
+
+top_10_nationality <- astronauts %>%
+  count(nationality) %>%
+  arrange(desc(n)) %>% 
+  head(10) %>%
+  pull(nationality)
+
+astronauts %>%
+  filter(nationality %in% top_10_nationality) %>%
+  group_by(name, nationality) %>%
+  count() %>%
+
+  ggplot(aes(y=nationality, x=n ))+
+  geom_jitter(aes(color=n), height = .2, width = .5)+
+  geom_boxplot(aes(fill = nationality),alpha =0.5)+
+  xlim(0,8)+
+  labs(
+    title = "Number of Trips Per Astronaut",
+    subtitle = "By Nationality",
+    x=NULL,
+    y=NULL
+  )+
+  scale_color_delabj("zune", discrete = F)+
+  scale_fill_delabj("main")+
+  guides(color=guide_none())+
+  theme_delabj()+
+  legend_none()
+```
 
 
 
-```{r datacleaning}
+```{r data_cleaning}
+astronauts_cleaned <- astronauts %>%
+  mutate(eva_inst_mission =  field21)
+
+
+
+
+```
+
+
+Now that I think I know what that field Is I feel like I have to use it. 
+
+
+```{r}
+polar_eav <- astronauts_cleaned %>%
+  filter(eva_inst_mission != 0) %>%
+  mutate(mission_decade = case_when(
+    year_of_mission >= 2020 ~ "2020",
+    year_of_mission >= 2010 ~ "2010",
+    year_of_mission >= 2000 ~ "2000",
+    year_of_mission >= 1990 ~ "1990",
+    year_of_mission >= 1980 ~ "1980",
+    year_of_mission >= 1970 ~ "1970",
+    year_of_mission >= 1960 ~ "1960",
+    TRUE ~ "NA"
+  ) ) %>%
+  group_by(mission_decade, sex) %>%
+  summarise(mean_eva_inst = mean(eva_inst_mission), 
+            max_eva_inst = max(eva_inst_mission)) %>%
+  ggplot() +
+  facet_wrap(~sex)+
+  #geom_bar(aes(x= mission_decade, y=max_eva_inst, ), stat="identity")+
+  geom_bar(aes(x= mission_decade, y=mean_eva_inst, fill =  mean_eva_inst), stat="identity")+
+  coord_polar(theta = "y")+
+  ylim(0,3)+
+  vapoRwave::new_retro(panel.grid.color = "#ce6f00")+
+  ggCyberPunk::scale_fill_cyberpunk( "cotton candy", discrete=FALSE, reverse = TRUE)+
+  labs(x=NULL, 
+       y=NULL, 
+       fill= NULL, 
+       title = "Mean number of EVAs by decade", 
+       subtitle =  "")+
+  guides(fill=guide_colorbar(
+    barheight = .3, 
+    barwidth = 15, 
+    title.position = "top"
+  ))+
+  theme(panel.border = element_blank(),
+        panel.grid.major = element_line(linetype ="solid", size = .05),
+        axis.text.x = element_text(vjust = 1), 
+        plot.title.position = "plot", 
+        plot.title = element_text( hjust = 0),
+        plot.subtitle = element_text( hjust = 0),
+        strip.text = element_text(hjust = .5), 
+        strip.background = element_blank()
+        )+
+  delabj:::gridlines_major_off()+
+  legend_bottom()
+
+polar_eav
+ggsave("polar_eva.png", plot = polar_eav, height=5, width =10, type="cairo")
+```
+
+```{r}
+
+## wait time
+age_event <- astronauts_cleaned %>%
+  mutate(delay = year_of_mission - year_of_selection) %>%
+  transmute(name,
+            sex,
+            age_selected = year_of_selection - year_of_birth,
+         age_on_mission = year_of_mission - year_of_birth) %>%
+  pivot_longer( cols = age_selected:age_on_mission, names_to = "event", values_to = "year") %>%
+  mutate( event = case_when(
+    str_detect(event, "Selected") ~ "Selected",
+    str_detect(event, "mission")   ~  "Mission",
+    TRUE ~ "Error"
+  )) %>%
+
+  ggplot(aes(x=year,  fill = event))+
+  facet_wrap(~sex, nrow= 2)+
+  geom_bar( position = position_dodge(), alpha =.75)+
+  scale_fill_manual( values = c("#08F7FE", "#ECCE8E"))+
+  new_retro()+
+  labs(
+    x=NULL, 
+    y=NULL, 
+    title = "Age at <b style = 'color:#08F7FE'>Selection</b> and at <b style = 'color:#ECCE8E'>Mission</b>",
+    subtitle = " "
+  )+
+  theme(panel.border = element_blank(),
+        panel.grid.major = element_line(linetype ="solid", size = .05),
+        axis.text.x = element_text(vjust = 1), 
+        plot.title.position = "plot", 
+        plot.title = element_markdown( hjust = 0),
+        plot.subtitle = element_text( hjust = 0),
+        strip.text = element_text(hjust = .5), 
+        strip.background = element_blank()
+        )+
+  delabj:::gridlines_off()+
+  legend_none()
+
+age_event
+
+diff_waiting <- astronauts_cleaned %>%
+  mutate(delay = year_of_mission - year_of_selection) %>%
+  group_by(year_of_selection, sex) %>%
+  summarise(median_delay = median(delay)) %>%
+  ggplot(aes(y=median_delay, x=year_of_selection, fill = sex))+
+  facet_wrap(~sex, nrow=2) +
+  geom_bar(stat =  "identity", color = "black")+
+     new_retro()+
+  labs(
+    x="Year Selected", 
+    y=NULL, 
+    title = "Years Waiting For Mission",
+    subtitle = " "
+  )+
+  theme(panel.border = element_blank(),
+        panel.grid.major = element_line(linetype ="solid", size = .05),
+        axis.text.x = element_text(vjust = 1), 
+        plot.title.position = "plot", 
+        plot.title = element_markdown( hjust = 0),
+        plot.subtitle = element_text( hjust = 0),
+        strip.text = element_text(hjust = .5), 
+        strip.background = element_blank()
+        )+
+  delabj:::gridlines_off()+
+  scale_fill_manual(values = c("#F19953", "#2660A4"))+
+  legend_none()
+
+diff_waiting
+ggsave("waiting_time.png", plot = diff_waiting, height = 5, width = 10, type ="cairo")
+```
+
+```{r}
+
+age_of_mission <- astronauts_cleaned %>%
+  mutate(delay = year_of_mission - year_of_selection) %>%
+  transmute(name,
+            sex,
+            year_of_mission,
+            year_of_selection,
+            age_selected = year_of_selection - year_of_birth,
+         age_on_mission = year_of_mission - year_of_birth) %>%
+  ggplot(aes(y= age_on_mission, x= year_of_mission, pch = sex, color=sex))+
+  geom_point()+
+       new_retro()+
+  labs(
+    x="Year Selected", 
+    y=NULL, 
+    title = "Ages of <b style = 'color:#2660A4'>Men</b> and  <b style = 'color:#F19953'>Women</b> On Missions In Space",
+    subtitle = " "
+  )+
+  theme(panel.border = element_blank(),
+        panel.grid.major = element_line(linetype ="solid", size = .05),
+        axis.text.x = element_text(vjust = 1), 
+        plot.title.position = "plot", 
+        plot.title = element_markdown( hjust = 0),
+        plot.subtitle = element_text( hjust = 0),
+        strip.text = element_text(hjust = .5), 
+        strip.background = element_blank()
+        )+
+  delabj:::gridlines_off()+
+  scale_color_manual(values = c("#F19953", "#2660A4"))+
+  legend_none()
+
+age_of_mission
+
+ggsave( "age_event.png", plot =age_event,  height = 5, width = 10, type="cairo")
+```
+
+```{r combine_plots}
+ # I don't like the combined plots. 
+age_plots <- age_event+diff_waiting
+
+ (age_of_mission / polar_eav) +age_event +
+plot_annotation(title = "Astronauts and Gender") 
+ 
+ ggsave("combo.png", height= 12, width = 6, type = "cairo")
 
 ```
 
