@@ -1,0 +1,137 @@
+---
+title: "Australian Pets"
+author: "Joshua de la Bruere"
+date: "7/21/2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fetching the data/setup
+
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweaks to ggplot, and custom themes on github use devtools::install_github("delabj/delabj") to install) 
+
+```{r loading, message=FALSE, warning=FALSE, echo=FALSE}
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(forcats)
+library(vapoRwave)
+library(ggCyberPunk)
+library(magrittr)
+
+
+animal_outcomes <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-21/animal_outcomes.csv')
+animal_complaints <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-21/animal_complaints.csv')
+brisbane_complaints <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-21/brisbane_complaints.csv')
+
+```
+
+
+I will start by doing some basic EDA to figure out if there's any cleaning that needs to be done or not. I want to play with the `%T>% operator to see if I can combine my standard summary/glipse starting point.
+
+
+```{r eda_p1}
+
+animal_complaints %T>%
+  glimpse() %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  summary()
+
+
+animal_outcomes %T>%
+  glimpse() %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  summary()
+
+brisbane_complaints %T>%
+  glimpse() %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  summary()
+
+
+```
+How many types of compants are there? What about by animal
+
+```{r eda_p2}
+animal_complaints %>%
+  group_by(`Animal Type`, `Complaint Type`) %>%
+  count() %>%
+  knitr::kable()
+
+```
+
+
+What about outcomes?
+```{r eda_p3}
+animal_outcomes %>%
+  group_by(animal_type, outcome) %>%
+  summarise(total = sum(Total)) %>%
+  knitr::kable()
+
+animal_outcomes %>%
+  group_by(animal_type, outcome) %>%
+  summarise(total = sum(Total)) %>%
+  ggplot(aes(y=outcome, x=total))+
+  facet_wrap(~animal_type)+
+  geom_bar(stat = "identity")+
+  theme_minimal()
+
+animal_outcomes %>%
+  ggplot(aes(x=year, y=Total, fill = outcome))+
+  geom_bar(stat = "identity", position = position_dodge())+
+  theme_minimal()+
+  legend_bottom()
+  
+
+```
+
+I'm not actually sure if I need to clean anything outright. I think I'll be lumping some categorical variables together to avoid having a lot of options. I will pivot the outcomes longer and maybe replace the values.
+
+
+```{r data cleaning}
+
+region_names <- tribble(
+~region_abb, ~region,
+'ACT',  'Australian Capital Territory',
+'NSW', 	'New South Wales',
+'NT', 	'Northern Territory',
+'QLD', 	'Queensland',
+'SA', 	'South Australia',
+'TAS', 	'Tasmania',
+'VIC', 	'Victoria',
+'WA', 	'Western Australian'
+)
+
+
+animal_complaints %<>%
+  janitor::clean_names()
+
+outcomes_cleaned <- animal_outcomes %>%
+  # I'm only interested in Cats and Dogs vs Others
+  mutate(animal_type = case_when(
+    str_detect(animal_type, "Cat") ~ "cat",
+    str_detect(animal_type, "Dog") ~ "dog",
+    TRUE ~ "other"
+  )) %>% 
+  pivot_longer(cols = ACT:WA, names_to = "region_abb", values_to = "number") %>%
+  left_join(region_names)
+  
+
+
+```
+
