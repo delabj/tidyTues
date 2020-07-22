@@ -135,3 +135,480 @@ outcomes_cleaned <- animal_outcomes %>%
 
 ```
 
+
+I kinda want to maybe do a statebins style plot. I recently made a pacakge for Africa countries, so I'm familiar with the code. 
+
+<details>
+
+<summary> Setting Up statebins </summary>
+
+
+I pretty much just copy pasted my Africa code, replaced all africa with austrailia, and then built the shape.
+
+```{r setup_state_bins}
+geom_countrybins_australia <- function(
+  mapping = NULL,
+  data = NULL,
+  border_col = "white",
+  border_size = 2,
+  lbl_size = 3,
+  dark_lbl = "black",
+  light_lbl = "white",
+  radius = grid::unit(6, "pt"),
+  ...,
+  na.rm = FALSE,
+  show.legend = NA,
+  inherit.aes = TRUE){
+
+  ggplot2::layer(
+    data = data,
+    mapping = mapping,
+    stat = "identity",
+    geom = Geomcountrybinsaustralia,
+    position = "identity",
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      border_col = border_col,
+      border_size = border_size,
+      lbl_size = lbl_size,
+      dark_lbl = dark_lbl,
+      light_lbl = light_lbl,
+      radius = radius,
+      na.rm = na.rm,
+      ...
+    )
+  )
+  }
+
+
+#' @rdname geom_countrybins_australia
+#' @export
+Geomcountrybinsaustralia <- ggplot2::ggproto(
+  "Geomcountrybinsaustralia", ggplot2::Geom,
+  default_aes = ggplot2::aes(
+    fill = "grey20",
+    colour = NA,
+    size = 0.1,
+    linetype = 1,
+    country = "country",
+    label="abrv_3_letter",
+    angle = 0,
+    hjust = 0.5,
+    vjust = 0.5,
+    alpha = NA,
+    family = "",
+    fontface = 1,
+    lineheight = 1.2
+    ),
+  extra_params = c(
+    "na.rm",
+    "width",
+    "height"
+    ),
+  setup_data = function(
+    data,
+    params) {
+    country_data <- data.frame(data, stringsAsFactors=FALSE)
+
+    if (max(nchar(country_data[,"country"])) <= 2) {
+      merge.x <- "abrv_2_letter"
+    }
+    else if (max(nchar(country_data[,"country"])) <= 3){
+      merge.x <- "abrv_3_letter"
+    }
+    else {
+      merge.x <- "country"
+    }
+    country_data <- validate_countries(country_data, "country", merge.x, ignore_dupes=TRUE)
+    ctry.dat <- merge(b_country_coords,
+                      country_data,
+                      by.x=merge.x,
+                      by.y="country",
+                      all.y=TRUE,
+                      sort=TRUE)
+
+    ctry.dat$width  <- ctry.dat$width  %||% params$width  %||% ggplot2::resolution(ctry.dat$x, FALSE)
+    ctry.dat$height <- ctry.dat$height %||% params$height %||% ggplot2::resolution(ctry.dat$y, FALSE)
+    transform(ctry.dat,
+              xmin = x - width / 2,
+              xmax = x + width / 2,
+              width = NULL,
+              ymin = y - height / 2,
+              ymax = y + height / 2,
+              height = NULL
+              ) -> xdat
+    xdat
+    },
+  required_aes = c("country", "fill"),
+  draw_panel = function(self, data,
+                        panel_params,
+                        coord,
+                        border_col = "white",
+                        border_size = 2,
+                        lbl_size = 3,
+                        dark_lbl = "black",
+                        light_lbl = "white",
+                        radius = grid::unit(6, "pt")) {
+    tile_data <- data
+    tile_data$colour <- border_col
+    tile_data$size <- border_size
+
+    text_data <- data
+    text_data$label <- data$abrv_3_letter
+    text_data$fill <- NA
+    text_data$size <-  lbl_size
+    text_data$colour <- .sb_invert(
+      data$fill,
+      dark_lbl,
+      light_lbl
+      )
+    coord <- coord_equal()
+    grid::gList(
+      GeomRtile$draw_panel(tile_data, panel_params, coord, radius),
+      ggplot2::GeomText$draw_panel(text_data, panel_params, coord)
+      ) -> grobs
+    ggname("geom_countrybins_australia", grid::grobTree(children = grobs))
+
+    },
+  draw_key = ggplot2::draw_key_polygon
+
+)
+
+
+geom_rrect <- function(mapping = NULL, data = NULL,
+                       stat = "identity", position = "identity",
+                       radius = grid::unit(6, "pt"),
+                       ...,
+                       na.rm = FALSE,
+                       show.legend = NA,
+                       inherit.aes = TRUE) {
+  layer(
+    data = data,
+    mapping = mapping,
+    stat = stat,
+    geom = GeomRrect,
+    position = position,
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      radius = radius,
+      na.rm = na.rm,
+      ...
+    )
+  )
+}
+
+GeomRrect <- ggplot2::ggproto("GeomRrect", ggplot2::Geom,
+
+                              default_aes = ggplot2::aes(
+                                colour = NA, fill = "grey35", size = 0.5, linetype = 1, alpha = NA
+                              ),
+
+                              required_aes = c("xmin", "xmax", "ymin", "ymax"),
+
+                              draw_panel = function(self, data, panel_params, coord,
+                                                    radius = grid::unit(6, "pt")) {
+
+                                coords <- coord$transform(data, panel_params)
+
+                                lapply(1:length(coords$xmin), function(i) {
+
+                                  grid::roundrectGrob(
+                                    coords$xmin[i], coords$ymax[i],
+                                    width = (coords$xmax[i] - coords$xmin[i]),
+                                    height = (coords$ymax[i] - coords$ymin)[i],
+                                    r = radius,
+                                    default.units = "native",
+                                    just = c("left", "top"),
+                                    gp = grid::gpar(
+                                      col = coords$colour[i],
+                                      fill = alpha(coords$fill[i], coords$alpha[i]),
+                                      lwd = coords$size[i] * .pt,
+                                      lty = coords$linetype[i],
+                                      lineend = "butt"
+                                    )
+                                  )
+
+                                }) -> gl
+
+                                grobs <- do.call(grid::gList, gl)
+
+                                ggname("geom_rrect", grid::grobTree(children = grobs))
+
+                              },
+
+                              draw_key = ggplot2::draw_key_polygon
+
+)
+
+geom_rtile <- function(mapping = NULL, data = NULL,
+                       stat = "identity", position = "identity",
+                       radius = grid::unit(6, "pt"),
+                       ...,
+                       na.rm = FALSE,
+                       show.legend = NA,
+                       inherit.aes = TRUE) {
+  ggplot2::layer(
+    data = data,
+    mapping = mapping,
+    stat = stat,
+    geom = GeomRtile,
+    position = position,
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      radius = radius,
+      na.rm = na.rm,
+      ...
+    )
+  )
+}
+
+GeomRtile <- ggplot2::ggproto("GeomRtile", GeomRrect,
+
+                              extra_params = c("na.rm", "width", "height"),
+
+                              setup_data = function(data, params) {
+                                data$width <- data$width %||% params$width %||% ggplot2::resolution(data$x, FALSE)
+                                data$height <- data$height %||% params$height %||% ggplot2::resolution(data$y, FALSE)
+
+                                transform(data,
+                                          xmin = x - width / 2,  xmax = x + width / 2,  width = NULL,
+                                          ymin = y - height / 2, ymax = y + height / 2, height = NULL
+                                )
+                              },
+
+                              default_aes = ggplot2::aes(
+                                fill = "grey20", colour = NA, size = 0.1, linetype = 1, alpha = NA
+                              ),
+
+                              required_aes = c("x", "y"),
+
+                              draw_key = ggplot2::draw_key_polygon
+
+)
+ggname <- function(prefix, grob) {
+  grob$name <- grid::grobName(grob, prefix)
+  grob
+}
+
+
+.sb_invert <- function(hex_color, dark_color="black", light_color="white",
+                       na_color="white") {
+
+  hex_color <- gsub("#", "", hex_color)
+
+  R <- suppressWarnings(as.integer(paste("0x", substr(hex_color,1,2), sep="")))
+  G <- suppressWarnings(as.integer(paste("0x", substr(hex_color,3,4), sep="")))
+  B <- suppressWarnings(as.integer(paste("0x", substr(hex_color,5,6), sep="")))
+
+  YIQ <- ((R*299) + (G*587) + (B*114)) / 1000
+
+  return(
+    ifelse(is.na(YIQ), na_color,
+           ifelse(
+             YIQ >= 128, dark_color, light_color)
+    )
+  )
+}
+
+# sanity checks for country values
+validate_countries <- function(country_data, country_col, merge.x, ignore_dupes=FALSE) {
+
+  good_country<- country_data[,country_col] %in% country_coords[,merge.x]
+  if (any(!good_country)) {
+    invalid <- country_data[,country_col][which(!good_country)]
+    country_data <- country_data[which(good_country),]
+    warning("Found invalid country values: ", invalid)
+  }
+
+  if (!ignore_dupes) {
+    dupes <- duplicated(country_data[,country_col])
+    if (any(dupes)) {
+      country_data <- country_data[which(!dupes),]
+      warning("Removing duplicate country rows")
+    }
+  }
+
+  return(country_data)
+
+}
+
+"%||%" <- function(a, b) { if (!is.null(a)) a else b }
+
+.pt <- 2.84527559055118
+
+
+country_coords <- structure(
+  list(
+    abrv_2_letter = c(          "NT", "QLD",
+                         "WA",   "SA", "NSW", "ACT", 
+                                  "VIC",
+                                  
+                                  "TAS"
+                      ),
+    abrv_3_letter = c(          "NT", "QLD",
+                         "WA",   "SA", "NSW","ACT",
+                                       
+                                       "VIC", 
+                                  
+                                  "TAS"
+      
+                      ),
+
+
+    country = c(  'Northern Territory', 'Queensland',
+                 'Western Australian', 'South Australia','New South Wales','Australian Capital Territory',
+                 'Victoria',
+                 'Tasmania'
+    ),
+    col = c(        2L, 3L,
+               1,  2L, 3L, 4L,
+                        
+                        3L, 
+                     
+                     4L
+            ),
+    row = c(     1L, 1L,
+             2L, 2L, 2L,  2L,
+                      
+                     3L,
+                  5L
+    )
+  ),
+  .Names = c(
+    "abrv_2_letter",
+             "abrv_3_letter",
+             "country",
+             "col",
+             "row"
+    ),
+  class = "data.frame", row.names = c(NA, -42L)
+)
+
+# Order by Country Name
+country_coords <- country_coords[order(country_coords$country),]
+
+
+# Convert col/row to y and x
+b_country_coords <- country_coords
+colnames(b_country_coords) <- c(
+                                "abrv_2_letter",
+                                "abrv_3_letter",
+                                "country",
+                                "x",
+                                "y"
+                                )
+# Convert Y to negative
+b_country_coords$y <- -b_country_coords$y
+```
+</details>
+
+This is 
+
+```{r}
+outcomes_cleaned %>%
+  ungroup %>%
+  filter(outcome %in% c("Rehomed", "Reclaimed"), year=="2018", 
+         animal_type != "other")%>% 
+  group_by(region_abb, animal_type) %>%
+  summarise(number = sum(number)) %>%
+  ungroup %>%
+  ggplot(aes(country=region_abb, fill=number))+
+    facet_wrap(~animal_type, nrow=1)+
+    geom_countrybins_australia()+
+  theme_delabj()+
+  guides(
+    fill = guide_colourbar(
+      title.position = "top"
+    ))+
+  labs(
+    title = "With Your Animal It's Home",
+    subtitle = "Austrailian States Reclaiming or Rehoming Cats and Dogs in 2018", 
+    fill= "Number",
+    caption = "Data: RSPCA \n Viz: @delabjl")+
+  delabj:::gridlines_off()+
+  delabj::legend_left()+
+  theme(axis.title = element_blank(), 
+        axis.text = element_blank())
+
+ggsave("Homes_Outcome.png", height = 5, width = 10, type="cairo")
+
+outcomes_cleaned %>%
+  ungroup %>%
+  filter(outcome %in% c("Euthanized"), year=="2018", 
+         animal_type != "other")%>% 
+  group_by(region_abb, animal_type) %>%
+  summarise(number = sum(number)) %>%
+  ungroup %>%
+  ggplot(aes(country=region_abb, fill=number))+
+    facet_wrap(~animal_type, nrow=1)+
+    geom_countrybins_australia()+
+  theme_delabj()+
+  guides(
+    fill = guide_colourbar(
+      title.position = "top"
+    ))+
+  scale_fill_gradient(low = "blue", high = "red")+
+  delabj::legend_left()+
+  labs(
+    title = "Euthanized Animals in Australia",
+    subtitle = "Austrailian States Euthanizing Cats and Dogs in 2018", 
+    fill= "Number",
+    caption = "Data: RSPCA \n Viz: @delabjl")+
+  delabj:::gridlines_off()
+
+ggsave("Euthanized_Outcome.png", height = 5, width = 10, type="cairo")
+
+
+
+
+```
+
+
+I'm not thrilled with how this looks, but it'll do for now. I tried animating, but it was a little wonkey and I don't like the aspect ration when it saves. 
+
+I'm curious about outcomes that are "good" vs "bad"
+
+
+```{r}
+
+
+order <- outcomes_cleaned %>%
+  group_by(region )%>%
+  summarise(n=sum(number, na.rm = TRUE)) %>%
+  arrange(n) %>% 
+  pull(region)
+
+
+
+outcomes_cleaned %>%
+  mutate(region = fct_rev(factor(region, levels = order))) %>%
+  mutate(outcome_type = case_when(
+    outcome %in% c( "Euthanized") ~ "Bad", 
+    outcome %in% c("Reclaimed", "Rehomed", "Released") ~ "Good",
+    TRUE~ "other"
+  )) %>%
+  group_by(year, region, outcome_type)%>%
+  summarise(n= sum(number, na.rm = TRUE)) %>%
+  mutate(val = if_else(outcome_type=="Bad", -n, n)) %>%
+  filter(outcome_type != "other") %>%
+  ggplot(aes(xend=year, x=year, yend=0, y=val, color=outcome_type))+
+  facet_wrap(~region, nrow=2)+
+  geom_segment()+
+  geom_point()+
+  delabj::theme_delabj() +
+  scale_color_manual(values=c("#721121", "#02075d"))+  
+  labs(title="Number Of <span style = 'color:#02075d'> Positive</span>
+    and <span style = 'color:#721121'>Negative</span> Outcomes ", 
+    subtitle = "For Animials In Australia",
+    caption = "Data: RSPCA \n Viz: @delabjl",
+    x="", y="")+
+  theme(plot.title = element_markdown())
+
+ggsave("outcomes_by_year.png",  height = 5, width = 10, type="cairo")
+  
+```
+
+
