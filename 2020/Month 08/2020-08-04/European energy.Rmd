@@ -502,7 +502,6 @@ fill = NA, label.color = NA  , size = 2)
 
 ggsave("recreation.png", type = "cairo", height = 5, width = 10, dpi=320)
 
-create_gif_from_pic()
 
 ```
 
