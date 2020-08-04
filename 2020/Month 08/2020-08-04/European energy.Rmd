@@ -271,7 +271,7 @@ geom_richtext(data = data.frame(x = 1.40942679208399,
     curvature = 0.12,
     inherit.aes = FALSE,
     show.legend = FALSE)+
-  geom_richtext(data = data.frame(x = 19.9569462238508,
+  geom_richtext(data = data.frame(x = 30,
     y = -0.755539654552852,
     label = "Most of <b>Poland's</b> electricity production is<br>from conventional thermal energy (90%)"),
     mapping = aes(x = x,
@@ -279,7 +279,7 @@ geom_richtext(data = data.frame(x = 1.40942679208399,
     label = label),
     angle = 0L,
     lineheight = 1L,
-    hjust = 0L,
+    hjust = 1L,
     vjust = 1L,
     family = "Open Sans",
     size = 2.5,
@@ -423,7 +423,75 @@ geom_segment(aes(x=2.25, xend=2.25, y=1-0.062, yend= 0.0625), color = "black")+
 base_plot+legend_none()+cowplot::draw_plot(inset, 32, 1.125, 5,1)+
   geom_richtext(aes(x=34.5,y=1.95), hjust = .5, label = "Total electric<br>production<br>of a country",
                 family = "Open Sans",  vjust = 0,
-                fill = NA, label.color = NA  , size = 2) 
+                fill = NA, label.color = NA  , size = 2) +
+  geom_richtext(data = data.frame(x = 33,
+y = 1.7,
+label = "Clean<br>electricity"),
+mapping = aes(x = x,
+y = y,
+label = label),
+angle = 0L,
+lineheight = 1L,
+hjust = 1,
+vjust = 0.5,
+colour = "black",
+family = "sans",
+fontface = "plain",
+inherit.aes = FALSE,
+show.legend = FALSE,
+fill = NA, label.color = NA  , size = 2)+
+  geom_richtext(data = data.frame(x = 33,
+y = 1.4,
+label = "Convetional<br>thermal"),
+mapping = aes(x = x,
+y = y,
+label = label),
+angle = 0L,
+lineheight = 1L,
+hjust = 1L,
+vjust = 0.5,
+colour = "black",
+family = "sans",
+fontface = "plain",
+inherit.aes = FALSE,
+show.legend = FALSE,
+fill = NA, label.color = NA  , size = 2)+
+  geom_richtext(data = data.frame(x = 35.65,
+y = 1.8471490862923,
+label = "Renewable"),
+mapping = aes(x = x,
+y = y,
+label = label),
+angle = 0L,
+lineheight = 1L,
+hjust = 0,
+vjust = 0.5,
+colour = "black",
+family = "sans",
+fontface = "plain",
+inherit.aes = FALSE,
+show.legend = FALSE, 
+fill = NA, label.color = NA  , size = 2)+
+  geom_richtext(data = data.frame(x = 35.65,
+y = 1.62987813761812,
+label = "Nuclear"),
+mapping = aes(x = x,
+y = y,
+label = label),
+angle = 0L,
+lineheight = 1L,
+hjust = 0,
+vjust = 0.5,
+colour = "black",
+family = "sans",
+fontface = "plain",
+inherit.aes = FALSE,
+show.legend = FALSE,
+fill = NA, label.color = NA  , size = 2)
+
+
+
+
  
 ```
 
@@ -431,6 +499,10 @@ base_plot+legend_none()+cowplot::draw_plot(inset, 32, 1.125, 5,1)+
 ```{r}
 
   ggsave(paste0(getwd(),"/temp_plots/",stringr::str_replace_all(Sys.time(),":|-| ","_"),".png"), device = "png", height = 5, width = 10, type = "cairo")
+
+ggsave("recreation.png", type = "cairo", height = 5, width = 10, dpi=320)
+
+create_gif_from_pic()
 
 ```
 
