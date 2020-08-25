@@ -1,0 +1,217 @@
+---
+title: "Chopped!"
+author: "Joshua de la Bruere"
+date: "8/25/2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Back at it again. Had to miss last week due to work/school stuff so it's nice to be back. This week the \#tidytuesday dataset is on energy
+
+## Fetching the data/setup
+
+As always I begin by fetching the data from the tidytuesday repo. 
+### Packages:
+These are the package I plan on using today:
+
++ tidyverse (It's what this is all about)
++ ggtext (A wonderful package by [@ClausWilke](https://twitter.com/ClausWilke) that enables better control over text rendering)
++ patchwork (By the amazing [@thomasp85](https://twitter.com/thomasp85) allows for easy combining of plots)
++ janitor (makes it easy to clean the names of a data set.)
++ forcats (easy work with factors)
++ delabj (A personal package that includes a few tweaks to ggplot, and custom themes on github use devtools::install_github("delabj/delabj") to install) 
+
+```{r loading, message=FALSE, warning=FALSE, echo=FALSE}
+extrafont::loadfonts("win")
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(janitor)
+library(delabj)
+library(wesanderson)
+library(forcats)
+
+
+#text libraries
+library(tidytext)
+library(textclean)
+library(tokenizers)
+library(markovchain)
+
+chopped <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-08-25/chopped.tsv')
+
+
+```
+
+
+Let's explore this data 
+```{r}
+chopped %>%
+  head()
+```
+
+I'm interested in exploring the ingredients by each type of dish (appetizer, entree, dessert). I'm also curious about how often the contestants appear and if there are any networks between judges and contestants. 
+
+```{r ingredient_by_meal_type}
+
+
+clean_ingredients <- function(.data){
+  
+  .data %>%
+     mutate(items = tolower(items),
+         items = str_remove(items, "baby"),
+         items = str_remove(items, "jumbo"),
+         items = str_remove(items, "assorted"),
+         items = str_remove(items, "\\)"),
+         items = str_remove(items, "\\("),
+         items = str_replace(items, "&",                 "and"),
+         items = str_replace(items, "jalapeno",          "jalapeño"),
+         items = str_replace(items, "halloumi cheese",   "halloumi"),
+         items = str_replace(items, "onions",            "onion"),
+         items = str_replace(items, "carcasses",         "carcass"),
+         items = str_replace(items, "chocolate covered", "chocolate-covered"),
+         items = str_replace(items, "sausages",          "sausage"),
+         items = str_replace(items, "steaks",            "steak"),
+         items = str_replace(items, "cucumbers",         "cucumber"),
+         items = str_replace(items, "country style",     "country-style"),
+         items = str_replace(items, "avocados",          "avocado"),
+         items = str_replace(items, "french fried",      "french-fried"),
+         items = str_replace(items, "tomatoes",          "tomato"),
+         items = str_replace(items, "breasts",           "breast"),
+         items = str_replace(items, "chops",             "chop"),
+         items = str_replace(items, "hot cocoa mix",     "hot chocolate mix"),
+         items = str_replace(items, "chew candy",        "chews"),
+         items = str_replace(items, "eggs",              "egg"),
+         items = str_replace(items, "coquitos",          "coquito"),
+         items = str_replace(items, "bread and butter",  "bread-and-butter"),
+         items = trimws(items))
+}
+
+
+
+appetizer_ingredients <- chopped %>%
+  select(season, season_episode, series_episode, appetizer) %>%
+  separate( appetizer, into = c("ing1","ing2","ing3","ing4"), sep = ",") %>%
+  pivot_longer( 
+    cols = starts_with("ing"),
+    names_to = "item_order", 
+    values_to = "items"
+               )%>%
+  drop_na(items) %>%
+  clean_ingredients() %>%
+  mutate(dish_type = "appetizer")
+
+# checking the output for weird discrepancies
+appetizer_ingredients %>% 
+  group_by(items) %>%
+  count(sort=TRUE)
+
+
+
+entre_ingredients <- chopped %>%
+  select(season, season_episode, series_episode, entree) %>%
+  separate( entree, into = c("ing1","ing2","ing3","ing4", "ing5", "ing6"), sep = ",") %>%
+  pivot_longer( 
+    cols = starts_with("ing"),
+    names_to = "item_order", 
+    values_to = "items"
+               )%>%
+  drop_na(items) %>%
+  clean_ingredients() %>%
+  mutate(dish_type = "entre")
+
+# checking the output for weird discrepancies
+entre_ingredients %>% 
+  group_by(items) %>%
+  count(sort=TRUE)
+
+
+
+dessert_ingredients <- chopped %>%
+  select(season, season_episode, series_episode, dessert) %>%
+  separate( dessert, into = c("ing1","ing2","ing3","ing4", "ing5", "ing6"), sep = ",") %>%
+  pivot_longer( 
+    cols = starts_with("ing"),
+    names_to = "item_order", 
+    values_to = "items"
+               )%>%
+  drop_na(items) %>%
+  clean_ingredients() %>%
+  mutate(dish_type = "dessert")
+
+# checking the output for weird discrepancies
+dessert_ingredients %>% 
+  group_by(items) %>%
+  count(sort=TRUE)
+
+
+adjectives <- c("dried", "canned", "frozen", "deep-fried", "freeze-dried", "boxed", "grilled", "fresh", "dehydrated", "candied")
+
+
+
+# Combine 
+all_ingredients <- appetizer_ingredients %>%
+  rbind(entre_ingredients) %>%
+  rbind(dessert_ingredients)
+
+#how often does bacon appear?
+
+all_ingredients %>%
+  mutate(bacon_appearence = case_when(
+    str_detect(items, "bacon") ~ TRUE, 
+    TRUE~ FALSE
+  )) %>%
+  group_by(season) %>%
+  count(bacon_appearence) %>%
+  filter(bacon_appearence) %>%
+  ggplot(aes(x=season, y=n, fill = season, color = season))+
+  geom_line()
+  geom_point(aes(size = n))
+  
+  # This is less interesting that I expected. 
+
+```
+
+It might be interesting to make a shiny app that generates random baskets
+
+
+```{r}
+raw_text <- all_ingredients %>% 
+  pivot_wider(values_from = items, 
+    names_from = item_order) %>%
+  unite(col = "list", starts_with("ing"), sep = " ", na.rm = TRUE) %>%
+  unite(col = "text", dish_type, list, sep = " ") %>%
+  mutate(text = tolower(text) %>%
+           replace_white() 
+  ) %>%
+  pull(text) %>% 
+  strsplit(" ") 
+  
+
+fit_markov <- markovchainFit(raw_text)
+  
+```
+
+
+```{r}
+
+create_basket <- function(num = 1, first_word = "appetizer", n_ingredients = 5){
+  
+  for(i in 1:num){
+
+    basket <- markovchainSequence(n = n_ingredients, 
+                        markovchain = fit_markov$estimate,
+                        t0 = tolower(first_word), include.t0 = FALSE) %>%
+      paste(collapse = " ") 
+    
+  }
+  
+  return(basket)
+  
+}
+
+```
+
